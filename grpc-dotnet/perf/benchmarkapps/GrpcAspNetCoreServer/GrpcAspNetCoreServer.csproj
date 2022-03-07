@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <!-- Uncomment line below to enable gRPC-Web on the server -->
+    <DefineConstants Condition="'$(EnableGrpcWeb)' == 'true'">$(DefineConstants);GRPC_WEB</DefineConstants>
+
+    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+    <!-- Uncomment line below to automatically compile .proto files in the project directory -->
+    <!-- <EnableDefaultProtoBufItems>true</EnableDefaultProtoBufItems> -->
+    <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
+
+    <!-- Turn on preview features so we can use Http3. Can be removed in .NET 7 -->
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Required for QUIC & HTTP/3 in .NET 6 - https://github.com/dotnet/runtime/pull/55332 -->
+    <RuntimeHostConfigurationOption Include="System.Net.SocketsHttpHandler.Http3Support" Value="true" />
+    
+    <Protobuf Include="..\Shared\benchmark_service.proto" GrpcServices="Server" Link="Protos\benchmark_service.proto" />
+    <Protobuf Include="..\Shared\messages.proto" GrpcServices="Server" Link="Protos\messages.proto" />
+
+    <None Include="..\Shared\Certs\*.*" LinkBase="Certs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <Compile Include="..\Shared\BenchmarkConfigurationHelpers.cs" Link="BenchmarkConfigurationHelpers.cs" />
+    <Compile Include="..\Shared\BenchmarkServiceImpl.cs" Link="Services\BenchmarkServiceImpl.cs" />
+
+    <Content Update="hosting.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
+    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableGrpcWeb)' == 'true'">
+    <ProjectReference Include="..\..\..\src\Grpc.AspNetCore.Web\Grpc.AspNetCore.Web.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="$([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 5.0))">
+    <ProjectReference Include="..\..\..\src\Grpc.AspNetCore.Server\Grpc.AspNetCore.Server.csproj" />
+
+    <PackageReference Include="Google.Protobuf" Version="$(GoogleProtobufPackageVersion)" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcPackageVersion)" PrivateAssets="All" />
+
+    <!--
+      TODO(JamesNK): This package ref should use MicrosoftAspNetCoreAppPackageVersion.
+      There is currently an issue using 6.0 versions so hardcode to 5.0
+      -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="5.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.23.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.9.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.23.0" PrivateAssets="All" />
+  </ItemGroup>
+</Project>

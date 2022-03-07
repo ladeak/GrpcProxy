@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>gRPC support for ASP.NET Core</Description>
+    <PackageTags>gRPC RPC HTTP/2 aspnetcore</PackageTags>
+
+    <IsGrpcPublishedPackage>true</IsGrpcPublishedPackage>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFrameworks>netcoreapp3.0;net5.0;net6.0</TargetFrameworks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Disable analysis for ConfigureAwait(false) -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA2007</WarningsNotAsErrors>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+
+    <Compile Include="..\Shared\CommonGrpcProtocolHelpers.cs" Link="Internal\CommonGrpcProtocolHelpers.cs" />
+    <Compile Include="..\Shared\NonDisposableMemoryStream.cs" Link="Internal\NonDisposableMemoryStream.cs" />
+    <Compile Include="..\Shared\DefaultDeserializationContext.cs" Link="Internal\DefaultDeserializationContext.cs" />
+    <Compile Include="..\Shared\Server\BindMethodFinder.cs" Link="Model\Internal\BindMethodFinder.cs" />
+    <Compile Include="..\Shared\Server\ClientStreamingServerMethodInvoker.cs" Link="Model\Internal\ClientStreamingServerMethodInvoker.cs" />
+    <Compile Include="..\Shared\Server\DuplexStreamingServerMethodInvoker.cs" Link="Model\Internal\DuplexStreamingServerMethodInvoker.cs" />
+    <Compile Include="..\Shared\Server\InterceptorPipelineBuilder.cs" Link="Model\Internal\InterceptorPipelineBuilder.cs" />
+    <Compile Include="..\Shared\Server\MethodOptions.cs" Link="Model\Internal\MethodOptions.cs" />
+    <Compile Include="..\Shared\Server\ServerMethodInvokerBase.cs" Link="Model\Internal\ServerMethodInvokerBase.cs" />
+    <Compile Include="..\Shared\Server\ServerStreamingServerMethodInvoker.cs" Link="Model\Internal\ServerStreamingServerMethodInvoker.cs" />
+    <Compile Include="..\Shared\Server\UnaryServerMethodInvoker.cs" Link="Model\Internal\UnaryServerMethodInvoker.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+
+    <ProjectReference Include="..\Grpc.Net.Common\Grpc.Net.Common.csproj" />
+  </ItemGroup>
+
+</Project>
