@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <VerifyDependencyInjectionOpenGenericServiceTrimmability>true</VerifyDependencyInjectionOpenGenericServiceTrimmability>
+
+    <!-- Turn on preview features so we can use Http3. Can be removed in .NET 7 -->
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net5.0' OR '$(TargetFramework)' == 'net6.0'">
+    <DefineConstants>SUPPORT_LOAD_BALANCING;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ServiceConfigHelpers.cs" Link="Infrastructure\ServiceConfigHelpers.cs" />
+    <Compile Include="..\Shared\ExceptionAssert.cs" Link="Infrastructure\ExceptionAssert.cs" />
+    <Compile Include="..\Shared\HttpContextServerCallContextHelpers.cs" Link="Infrastructure\HttpContextServerCallContextHelpers.cs" />
+    <Compile Include="..\Shared\MessageHelpers.cs" Link="Infrastructure\MessageHelpers.cs" />
+    <Compile Include="..\Shared\SyncPoint.cs" Link="Infrastructure\SyncPoint.cs" />
+    <Compile Include="..\Shared\SyncPointMemoryStream.cs" Link="Infrastructure\SyncPointMemoryStream.cs" />
+    <Compile Include="..\Shared\TaskExtensions.cs" Link="Infrastructure\TaskExtensions.cs" />
+    <Compile Include="..\Shared\TestHelpers.cs" Link="Infrastructure\TestHelpers.cs" />
+    <Compile Include="..\Shared\TestResolver.cs" Link="Infrastructure\Balancer\TestResolver.cs" />
+    <Compile Include="..\Shared\TestResolverFactory.cs" Link="Infrastructure\Balancer\TestResolverFactory.cs" />
+    <Compile Include="..\Shared\CallbackInterceptor.cs" Link="Infrastructure\CallbackInterceptor.cs" />
+    <Compile Include="..\Shared\HttpEventSourceListener.cs" Link="Infrastructure\HttpEventSourceListener.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Required for QUIC & HTTP/3 in .NET 6 - https://github.com/dotnet/runtime/pull/55332 -->
+    <RuntimeHostConfigurationOption Include="System.Net.SocketsHttpHandler.Http3Support" Value="true" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\src\Grpc.Net.Client\Grpc.Net.Client.csproj" />
+    <ProjectReference Include="..\..\src\Grpc.Net.Client.Web\Grpc.Net.Client.Web.csproj" />
+    <ProjectReference Include="..\..\src\Grpc.Net.ClientFactory\Grpc.Net.ClientFactory.csproj" />
+
+    <ProjectReference Include="..\..\testassets\FunctionalTestsWebsite\FunctionalTestsWebsite.csproj" />
+
+    <PackageReference Include="Microsoft.Extensions.Logging.Testing" Version="$(MicrosoftExtensionsLoggingTestingPackageVersion)" />
+
+    <None Update="server1.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ProjectDirectory</_Parameter1>
+      <_Parameter2>$(ProjectDir)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='netcoreapp3.1'">
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(MicrosoftAspNetCoreApp31PackageVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)'=='net5.0'">
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(MicrosoftAspNetCoreApp5PackageVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)'=='net6.0'">
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
+  </ItemGroup>
+
+</Project>

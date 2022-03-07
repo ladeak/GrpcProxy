@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>.NET client for gRPC</Description>
+    <PackageTags>gRPC RPC HTTP/2</PackageTags>
+
+    <IsGrpcPublishedPackage>true</IsGrpcPublishedPackage>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net5.0;net6.0</TargetFrameworks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="$(SystemDiagnosticsDiagnosticSourcePackageVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net5.0' OR '$(TargetFramework)' == 'net6.0'">
+    <DefineConstants>SUPPORT_LOAD_BALANCING;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+
+    <Compile Include="..\Shared\CommonGrpcProtocolHelpers.cs" Link="Internal\CommonGrpcProtocolHelpers.cs" />
+    <Compile Include="..\Shared\DefaultDeserializationContext.cs" Link="Internal\DefaultDeserializationContext.cs" />
+    <Compile Include="..\Shared\HttpHandlerFactory.cs" Link="Internal\Http\HttpHandlerFactory.cs" />
+    <Compile Include="..\Shared\TelemetryHeaderHandler.cs" Link="Internal\Http\TelemetryHeaderHandler.cs" />
+    <Compile Include="..\Shared\HttpRequestHelpers.cs" Link="Internal\Http\HttpRequestHelpers.cs" />
+    <Compile Include="..\Shared\TrailingHeadersHelpers.cs" Link="Internal\Http\TrailingHeadersHelpers.cs" />
+    <Compile Include="..\Shared\CompatibilityHelpers.cs" Link="Internal\CompatibilityHelpers.cs" />
+    <Compile Include="..\Shared\NullableAttributes.cs" Link="Internal\NullableAttributes.cs" />
+    <Compile Include="..\Shared\Http2ErrorCode.cs" Link="Internal\Http2ErrorCode.cs" />
+    <Compile Include="..\Shared\Http3ErrorCode.cs" Link="Internal\Http3ErrorCode.cs" />
+    <Compile Include="..\Shared\NonDisposableMemoryStream.cs" Link="Internal\NonDisposableMemoryStream.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Grpc.Net.Common\Grpc.Net.Common.csproj" />
+  </ItemGroup>
+
+</Project>

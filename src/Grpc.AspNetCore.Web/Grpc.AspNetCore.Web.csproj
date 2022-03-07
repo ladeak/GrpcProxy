@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>gRPC-Web support for ASP.NET Core</Description>
+    <PackageTags>gRPC RPC HTTP/2 aspnetcore</PackageTags>
+
+    <IsGrpcPublishedPackage>true</IsGrpcPublishedPackage>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFrameworks>netcoreapp3.0;net5.0;net6.0</TargetFrameworks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Disable analysis for ConfigureAwait(false) -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA2007</WarningsNotAsErrors>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+
+    <Compile Include="..\Shared\CommonGrpcProtocolHelpers.cs" Link="Internal\CommonGrpcProtocolHelpers.cs" />
+    <Compile Include="..\Shared\IsExternalInit.cs" Link="Internal\IsExternalInit.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>
