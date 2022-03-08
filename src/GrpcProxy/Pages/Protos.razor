@@ -1,0 +1,105 @@
+﻿@page "/protos"
+@using GrpcProxy.Compilation
+@using GrpcProxy.Grpc
+@using System.ComponentModel.DataAnnotations
+@inject IProxyServiceRepository _serviceRepo
+
+<div class="card">
+	<div class="card-body">
+		@if (!string.IsNullOrWhiteSpace(Error))
+		{
+			<div class="alert alert-primary" role="alert">@Error</div>
+		}
+		<h5 class="card-title">Add proto file</h5>
+		<EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit">
+			<DataAnnotationsValidator />
+			<ValidationSummary />
+			<div class="mb-3">
+				<label for="formGroupExampleInput" class="form-label">Service Address:</label>
+				<InputText @bind-Value="Model.ServiceAddress" />
+			</div>
+			<div class="mb-3">
+				<label for="formGroupExampleInput" class="form-label">Proto File:</label>
+				<InputFile OnChange="@LoadFiles" />
+			</div>
+			<button type="submit" class="btn btn-success" disabled="@(!context.Validate())">Add Proto</button>
+		</EditForm>
+	</div>
+</div>
+
+
+<div class="card" style="margin-top: 10px;">
+	<div class="card-body">
+		<h5 class="card-title">Loaded proto files</h5>
+		@if (_serviceRepo.Services.Any())
+		{
+			<ul class="list-group">
+				@foreach (var service in _serviceRepo.Services)
+				{
+					<li class="list-group-item d-flex justify-content-between align-items-center">
+						@service.FilePath
+						<button type="button" class="btn btn-danger" onclick=@(() => RemoveProto(service.FilePath))>X</button>
+					</li>
+				}
+			</ul>
+		}
+		else
+		{
+			<p>No proto file has been loaded.</p>
+		}
+	</div>
+</div>
+@code
+{
+	public class ProtoModel
+	{
+		[Required]
+		[WellFormed]
+		public string? ServiceAddress { get; set; } = "https://localhost:5001";
+
+		[Required]
+		public Microsoft.AspNetCore.Components.Forms.IBrowserFile? File { get; set; }
+	}
+
+	public ProtoModel Model { get; set; } = new ProtoModel();
+
+	public string Error { get; set; } = string.Empty;
+
+	private async Task HandleValidSubmit()
+	{
+		Error = string.Empty;
+		if (Model.File == null || !Uri.IsWellFormedUriString(Model.ServiceAddress, UriKind.Absolute))
+			return;
+		var tempFile = Path.Combine(Path.GetTempPath(), Model.File!.Name);
+		try
+		{
+			await using FileStream fs = new(tempFile, FileMode.Create);
+			await Model.File.OpenReadStream().CopyToAsync(fs);
+			await fs.FlushAsync();
+			fs.Close();
+			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, Model.ServiceAddress!, tempFile);
+		}
+		catch (Exception ex)
+		{
+			Error = ex.Message;
+		}
+		finally
+		{
+			if (File.Exists(tempFile))
+				File.Delete(tempFile);
+		}
+	}
+
+	private void RemoveProto(string fileName)
+	{
+		Error = string.Empty;
+		_serviceRepo.RemoveService(fileName);
+		StateHasChanged();
+	}
+
+	private void LoadFiles(InputFileChangeEventArgs e)
+	{
+		Model.File = e.File;
+		Error = string.Empty;
+	}
+}

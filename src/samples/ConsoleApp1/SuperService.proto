@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option csharp_namespace = "Super";
+
+
+service SuperService {
+  rpc DoWork(RequestData) returns (ResponseData) {}
+  rpc StreamWork(stream RequestData) returns (ResponseData) {}
+}
+
+message Empty {
+}
+
+message RequestData {
+  string message = 1;
+}
+
+message ResponseData {
+  string message = 1;
+}

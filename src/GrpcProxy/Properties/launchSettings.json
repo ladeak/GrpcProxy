@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "WebProxy": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "GrpcProxy:Mappings:0:ProtoFilePath": ".\\SuperService.proto",
+        "GrpcProxy:Mappings:0:ServiceAddress": "https://localhost:5001"
+      },
+      "applicationUrl": "https://localhost:7012",
+      "dotnetRunMessages": true
+    }
+  }
+}

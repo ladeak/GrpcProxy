@@ -1,0 +1,69 @@
+﻿@page "/"
+@using GrpcProxy.Visualizer
+@using GrpcProxy.Grpc
+@using System.Collections.Immutable
+@inject IMessageRepository _messageRepo
+@implements IDisposable
+
+<PageTitle>Index</PageTitle>
+
+<div>
+	<div class="row" style="margin-bottom: 10px;">
+		<div class="col-md-auto">
+			<Button class="col btn btn-primary btn-sm" type="button" @onclick="ClearMessages">Clear</Button>
+		</div>
+		<div class="col input-group input-group-sm">
+			<span class="input-group-text" id="basic-addon1">$</span>
+			<input type="text" class="form-control" style="max-width: 150px" placeholder="search..." aria-label="search..." aria-describedby="basic-addon1" @bind-value="SearchText">
+		</div>
+	</div>
+	<Virtualize Context=item Items="Messages">
+		<ProxyMessageComponent Message=@item></ProxyMessageComponent>
+	</Virtualize>
+</div>
+
+
+@code
+{
+	private string _searchText = string.Empty;
+	public string SearchText
+	{
+		get => _searchText;
+		set
+		{
+			_searchText = value; 
+			SearchUpdate();
+		}
+	}
+
+	protected override Task OnInitializedAsync()
+	{
+		SearchText = string.Empty;
+		_messageRepo.OnMessage += HandleMessage;
+		Messages = _messageRepo.Messages;
+		return base.OnInitializedAsync();
+	}
+
+	public void SearchUpdate()
+	{
+		if (!string.IsNullOrWhiteSpace(SearchText))
+			Messages = _messageRepo.Messages.Where(x => x.Contains(SearchText)).ToList();
+		else
+			Messages = _messageRepo.Messages;
+		StateHasChanged();
+	}
+
+	public void ClearMessages() => _messageRepo.Clear();
+
+	public async void HandleMessage(object? sender, ProxyMessage eventData)
+	{
+		await InvokeAsync(() => SearchUpdate());
+	}
+
+	public ICollection<ProxyMessage> Messages { get; private set; } = new List<ProxyMessage>();
+
+	public void Dispose()
+	{
+		_messageRepo.OnMessage -= HandleMessage;
+	}
+	}

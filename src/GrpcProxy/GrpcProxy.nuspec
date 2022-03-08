@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>GrpcProxy</id>
+    <version>1.0.0</version>
+    <authors>ladeak</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <description>A dotnet tool to visualize GRPC requests and responses</description>
+    <packageTypes>
+      <packageType name="DotnetTool" />
+    </packageTypes>
+    <frameworkReferences>
+      <group targetFramework="net6.0">
+        <frameworkReference name="Microsoft.AspNetCore.App" />
+      </group>
+    </frameworkReferences>
+    <copyright>$copyright$</copyright>
+    <tags>dotnet tool gprc visualization</tags>
+  </metadata>
+  <files>
+    <file src="**\*" target="tools\net6.0\any" />
+  </files>
+</package>
+
