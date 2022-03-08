@@ -1,0 +1,32 @@
+name: CD
+
+on:
+  release:
+    types: [created]
+
+env:
+  CONFIGURATION: Release
+  DOTNET_VERSION: 6.0.x
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Set VERSION variable from tag
+      run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
+    - name: Restore
+      run: dotnet restore src/GrpcProxy/GrpcProxy.csproj
+    - name: Build
+      run: dotnet publish src/GrpcProxy/GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-self-contained --no-restore --framework net6.0 -p:Version=${VERSION}
+    - name: Setup NuGet.exe
+      uses: nuget/setup-nuget@v1
+    - name: Create package
+      run: nuget pack src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish
+    - name: Publish
+      run: dotnet nuget push **/bin/Release/**/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $nuget_api_key --skip-duplicate
+      env:
+        nuget_api_key: ${{ secrets.NUGET_API_KEY }}
