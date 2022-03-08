@@ -18,6 +18,6 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Restore
-      run: dotnet restore
+      run: dotnet restore src\GrpcProxy\GrpcProxy.csproj
     - name: Build
-      run: dotnet publish GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-self-contained --no-restore --framework net6.0
+      run: dotnet publish rc\GrpcProxy\GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-self-contained --no-restore --framework net6.0
