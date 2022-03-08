@@ -1,4 +1,4 @@
-.\build.cmd
+.\build.ps1
 dotnet tool uninstall grpcproxy --global
 dotnet tool install GrpcProxy --add-source .\bin\Release\net6.0\publish --global
 grpcproxy
