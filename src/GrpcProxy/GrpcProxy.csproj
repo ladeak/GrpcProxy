@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PublishTrimmed>false</PublishTrimmed>
     <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>strongName.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>Eng\strongName.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
