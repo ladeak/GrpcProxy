@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package >
   <metadata>
-    <id>GrpcProxy</id>
-    <version>1.0.0</version>
+    <id>LaDeak.GrpcProxy</id>
+    <version>0.0.1-dev</version>
     <authors>ladeak</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
