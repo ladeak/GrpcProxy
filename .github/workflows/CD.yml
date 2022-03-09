@@ -27,4 +27,4 @@ jobs:
     - name: Setup NuGet.exe
       uses: nuget/setup-nuget@v1
     - name: Create package
-      run: nuget pack src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish/GrpcProxy.nuspec -OutputDirectory src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish
+      run: nuget pack src/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/bin/Release/net6.0/publish
