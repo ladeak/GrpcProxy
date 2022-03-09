@@ -3,12 +3,10 @@
   "profiles": {
     "WebProxy": {
       "commandName": "Project",
+      "commandLineArgs": "--p:ProtoPath .\\SuperService.proto --p:Address https://localhost:5001",
       "launchBrowser": true,
-      "launchUrl": "",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "GrpcProxy:Mappings:0:ProtoFilePath": ".\\SuperService.proto",
-        "GrpcProxy:Mappings:0:ServiceAddress": "https://localhost:5001"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "https://localhost:7012",
       "dotnetRunMessages": true

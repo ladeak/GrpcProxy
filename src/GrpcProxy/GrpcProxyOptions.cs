@@ -8,9 +8,8 @@ public class GrpcProxyOptions
 
 public class GrpcProxyMapping
 {
-    public string? ProtoFilePath { get; set; }
+    public string? ProtoPath { get; set; }
 
-    public string? ServiceAddress { get; set; }
-
-    public int? MessagesLimit { get; set; }
+    public string? Address { get; set; }
 }
+
