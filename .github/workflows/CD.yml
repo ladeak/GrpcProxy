@@ -3,10 +3,6 @@ name: Build and Deploy
 on:
   release:
     types: [created]
-  workflow_dispatch:
-  push:
-    branches:
-      - master
 
 env:
   CONFIGURATION: Release
@@ -22,6 +18,8 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Set VERSION variable from tag
       run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
+    - name: Test
+      run: echo $VERSION
     - name: Restore
       run: dotnet restore src/GrpcProxy/GrpcProxy.csproj
     - name: Build
