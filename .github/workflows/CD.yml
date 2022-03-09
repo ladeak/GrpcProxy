@@ -27,4 +27,8 @@ jobs:
     - name: Setup NuGet.exe
       uses: nuget/setup-nuget@v1
     - name: Create package
-      run: nuget pack src/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/bin/Release/net6.0/publish
+      run: nuget pack src/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/bin/Release/net6.0/publish -Version ${VERSION}
+    - name: Publish
+      run: dotnet nuget push src/GrpcProxy/bin/Release/net6.0/publish/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $nuget_api_key --skip-duplicate
+      env:
+        nuget_api_key: ${{ secrets.NUGET_API_KEY }}
