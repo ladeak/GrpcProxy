@@ -25,7 +25,7 @@ jobs:
     - name: Restore
       run: dotnet restore src/GrpcProxy/GrpcProxy.csproj
     - name: Build
-      run: dotnet build src/GrpcProxy/GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-restore -p:Version=${VERSION}
+      run: dotnet build src/GrpcProxy/GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-restore -p:Version=0.0.1-alpha
     - name: Publish
       run: dotnet publish src/GrpcProxy/GrpcProxy.csproj --configuration ${{ env.CONFIGURATION }} --no-self-contained --no-restore --framework net6.0 -p:Version=${VERSION}
     - name: Setup NuGet.exe
