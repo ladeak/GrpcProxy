@@ -18,8 +18,6 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Set VERSION variable from tag
       run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
-    - name: Test
-      run: echo $VERSION
     - name: Restore
       run: dotnet restore src/GrpcProxy/GrpcProxy.csproj
     - name: Build
@@ -29,4 +27,4 @@ jobs:
     - name: Setup NuGet.exe
       uses: nuget/setup-nuget@v1
     - name: Create package
-      run: nuget pack src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish
+      run: nuget pack src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish/GrpcProxy.nuspec -OutputDirectory src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish
