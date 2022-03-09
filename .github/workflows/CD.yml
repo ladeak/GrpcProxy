@@ -3,6 +3,10 @@ name: Build and Deploy
 on:
   release:
     types: [created]
+  workflow_dispatch:
+  push:
+    branches:
+      - master
 
 env:
   CONFIGURATION: Release
@@ -28,7 +32,3 @@ jobs:
       uses: nuget/setup-nuget@v1
     - name: Create package
       run: nuget pack src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish -OutputDirectory src/GrpcProxy/GrpcProxy/bin/Release/net6.0/publish
-    - name: Publish
-      run: dotnet nuget push **/bin/Release/**/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $nuget_api_key --skip-duplicate
-      env:
-        nuget_api_key: ${{ secrets.NUGET_API_KEY }}
