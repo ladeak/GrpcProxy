@@ -13,7 +13,7 @@ env:
   DOTNET_VERSION: 6.0.x
 jobs:
   build-and-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET
