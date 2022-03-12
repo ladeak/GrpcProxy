@@ -5,9 +5,7 @@ option csharp_namespace = "Super";
 
 service SuperService {
   rpc DoWork(RequestData) returns (ResponseData) {}
-}
-
-message Empty {
+  rpc StreamWork(stream RequestData) returns (ResponseData) {}
 }
 
 message RequestData {

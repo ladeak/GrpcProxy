@@ -8,9 +8,6 @@ service SuperService {
   rpc StreamWork(stream RequestData) returns (ResponseData) {}
 }
 
-message Empty {
-}
-
 message RequestData {
   string message = 1;
 }

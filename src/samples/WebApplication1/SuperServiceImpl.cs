@@ -25,7 +25,7 @@ namespace Service
             int i = 0;
             await foreach (var item in requestStream.ReadAllAsync())
                 if (!string.IsNullOrWhiteSpace(item.Message))
-                    i++;
+                    Console.WriteLine($"Processing Stream {i++}");
             return new ResponseData { Message = $"Received {i}" };
         }
     }

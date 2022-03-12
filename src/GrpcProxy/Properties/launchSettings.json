@@ -3,8 +3,8 @@
   "profiles": {
     "WebProxy": {
       "commandName": "Project",
-      //"commandLineArgs": "--p:ProtoPath .\\SuperService.proto --p:Address https://localhost:5001",
-      "commandLineArgs": "--GrpcProxy:FallbackAddress https://localhost:5001",
+      "commandLineArgs": "--p:ProtoPath .\\SuperService.proto --p:Address https://localhost:5001",
+      //"commandLineArgs": "--GrpcProxy:FallbackAddress https://localhost:5001",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Grpc.Core;
-using Grpc.Core.Interceptors;
-using Grpc.Net.Client;
+﻿using Grpc.Net.Client;
 using Super;
 
 namespace NameClient;
@@ -23,18 +19,18 @@ class Program
             try
             {
                 RequestData request;
-                request = new RequestData() { Message = "Pocak" };
-                var response = await client.DoWorkAsync(request);
-                Console.WriteLine(response.Message);
+                //request = new RequestData() { Message = "Pocak" };
+                //var response = await client.DoWorkAsync(request);
+                //Console.WriteLine(response.Message);
 
-                //using var streamOfWork = client.StreamWork();
-                //for (int i = 0; i < 5; i++)
-                //{
-                //    request = new RequestData() { Message = "Pocak" };
-                //    await streamOfWork.RequestStream.WriteAsync(request);
-                //}
-                //await streamOfWork.RequestStream.CompleteAsync();
-                //Console.WriteLine((await streamOfWork).Message);
+                using var streamOfWork = client.StreamWork();
+                for (int i = 0; i < 5; i++)
+                {
+                    request = new RequestData() { Message = "Pocak" };
+                    await streamOfWork.RequestStream.WriteAsync(request);
+                }
+                await streamOfWork.RequestStream.CompleteAsync();
+                Console.WriteLine((await streamOfWork).Message);
             }
             catch (Exception e)
             {
