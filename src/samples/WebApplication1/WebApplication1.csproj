@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Grpc.AspNetCore\Grpc.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\grpc-dotnet\src\Grpc.AspNetCore\Grpc.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

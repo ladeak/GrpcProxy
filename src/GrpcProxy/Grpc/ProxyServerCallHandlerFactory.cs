@@ -32,10 +32,14 @@ internal partial class ProxyServerCallHandlerFactory
         return MethodOptions.Create(new[] { _globalOptions });
     }
 
+    public UnTypedServerCallHandler CreateUnTyped(string serviceAddress)
+    {
+        return new UnTypedServerCallHandler(_loggerFactory, _httpClientFactory, _mediator, serviceAddress);
+    }
+
     public ProxyUnaryServerCallHandler<TRequest, TResponse> CreateUnary<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
         where TRequest : class
         where TResponse : class
-
     {
         return new ProxyUnaryServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _loggerFactory, _httpClientFactory, _mediator, serviceAddress);
     }

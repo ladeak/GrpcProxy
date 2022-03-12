@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Grpc.Core;
-using Microsoft.AspNetCore.Routing;
 
 namespace GrpcProxy.Grpc;
 

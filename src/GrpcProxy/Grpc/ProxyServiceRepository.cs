@@ -18,7 +18,7 @@ internal class ProxyServiceRepository : IProxyServiceRepository
 
     public void AddService(Type baseService, string address, string protoFile, ProxyServiceAssemblyContext context)
     {
-        if(_services.ContainsKey(protoFile))
+        if (_services.ContainsKey(protoFile))
             RemoveService(protoFile);
         var serviceMethodProviderContext = new ProxyServiceMethodProviderContext(_serverCallHandlerFactory, address);
         ServiceMethodDiscovery(serviceMethodProviderContext, baseService);

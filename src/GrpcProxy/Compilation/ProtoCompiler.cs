@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace GrpcProxy.Compilation;
@@ -46,5 +47,47 @@ public class ProtoCompiler
             throw new ProtocException("No Grpc output file generated.");
 
         return (outputPath, outputGrpcPath);
+    }
+
+    public static string Deserialize(ReadOnlySequence<byte> data)
+    {
+        var packagePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+        var startInfo = new ProcessStartInfo()
+        {
+            FileName = Path.Combine(packagePath, Environment.OSVersion.Platform == PlatformID.Win32NT ? "protoc.exe" : "protoc")
+        };
+
+        startInfo.ArgumentList.Add("--decode_raw");
+        startInfo.CreateNoWindow = true;
+        startInfo.RedirectStandardOutput = true;
+        startInfo.RedirectStandardError = true;
+        startInfo.RedirectStandardInput = true;
+        using var process = new Process()
+        {
+            StartInfo = startInfo,
+        };
+        process.Start();
+
+        SequencePosition position = data.Start;
+        ReadOnlyMemory<byte> buffer;
+        while (data.TryGet(ref position, out buffer, true))
+        {
+            var input = new char[buffer.Length];
+            for (int i = 0; i < buffer.Length; i++)
+                input[i] = (char)buffer.Span[i];
+            process.StandardInput.Write(input);
+        }
+        process.StandardInput.Close();
+
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            var error = process.StandardError.ReadToEnd();
+            throw new ProtocException(error);
+        }
+
+        var response = process.StandardOutput.ReadToEnd();
+        return response;
     }
 }

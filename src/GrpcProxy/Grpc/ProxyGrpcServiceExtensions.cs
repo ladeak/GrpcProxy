@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GrpcProxy.Grpc;
 
-public static class ProxyGrpcServiceExtensions
+public static partial class ProxyGrpcServiceExtensions
 {
     public static IGrpcServerBuilder AddProxy(this IGrpcServerBuilder builder)
     {

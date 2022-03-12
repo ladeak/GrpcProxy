@@ -3,6 +3,8 @@
 public class GrpcProxyOptions
 {
     public List<GrpcProxyMapping>? Mappings { get; set; }
+
+    public string? FallbackAddress { get; set; }
 }
 
 
@@ -12,4 +14,3 @@ public class GrpcProxyMapping
 
     public string? Address { get; set; }
 }
-

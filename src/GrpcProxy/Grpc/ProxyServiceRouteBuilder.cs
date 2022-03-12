@@ -14,16 +14,16 @@ internal class ProxyServiceRouteBuilder
         _serviceMethodsRegistry = serviceMethodsRegistry ?? throw new ArgumentNullException(nameof(serviceMethodsRegistry));
     }
 
-    internal List<IEndpointConventionBuilder> Build(IEndpointRouteBuilder endpointRouteBuilder)
+    internal List<IEndpointConventionBuilder> Build(IEndpointRouteBuilder endpointRouteBuilder, UnTypedServerCallHandler? fallbackHandler)
     {
         var endpointConventionBuilders = new List<IEndpointConventionBuilder>();
-        CreateGenericEndpoint(endpointRouteBuilder, endpointConventionBuilders);
+        CreateGenericEndpoint(endpointRouteBuilder, endpointConventionBuilders, fallbackHandler);
         return endpointConventionBuilders;
     }
 
-    internal void CreateGenericEndpoint(IEndpointRouteBuilder endpointRouteBuilder, List<IEndpointConventionBuilder> endpointConventionBuilders)
+    internal void CreateGenericEndpoint(IEndpointRouteBuilder endpointRouteBuilder, List<IEndpointConventionBuilder> endpointConventionBuilders, UnTypedServerCallHandler? fallbackHandler)
     {
-        endpointConventionBuilders.Add(CreateGenericEndpoint(endpointRouteBuilder, "{genericService}/{genericMethod}", "Generic service", CreateGenericHandler()));
+        endpointConventionBuilders.Add(CreateGenericEndpoint(endpointRouteBuilder, "{genericService}/{genericMethod}", "Generic service", CreateGenericHandler(fallbackHandler)));
     }
 
     private IEndpointConventionBuilder CreateGenericEndpoint(IEndpointRouteBuilder endpointRouteBuilder, string pattern, string displayName, RequestDelegate requestDelegate)
@@ -39,7 +39,7 @@ internal class ProxyServiceRouteBuilder
         return endpointBuilder;
     }
 
-    private RequestDelegate CreateGenericHandler()
+    private RequestDelegate CreateGenericHandler(UnTypedServerCallHandler? fallbackHandler)
     {
         return httpContext =>
         {
@@ -53,6 +53,9 @@ internal class ProxyServiceRouteBuilder
                 httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
                 return Task.CompletedTask;
             }
+
+            if (fallbackHandler is { })
+                return fallbackHandler.HandleCallAsync(httpContext);
 
             GrpcProtocolHelpers.AddProtocolHeaders(httpContext.Response);
             var genericService = httpContext.Request.RouteValues["genericService"]?.ToString();

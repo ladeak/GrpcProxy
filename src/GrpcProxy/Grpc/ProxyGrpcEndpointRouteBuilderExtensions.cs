@@ -1,4 +1,6 @@
-﻿namespace GrpcProxy.Grpc;
+﻿using Microsoft.Extensions.Options;
+
+namespace GrpcProxy.Grpc;
 
 public static class ProxyGrpcEndpointRouteBuilderExtensions
 {
@@ -9,8 +11,12 @@ public static class ProxyGrpcEndpointRouteBuilderExtensions
         ValidateServicesRegistered(builder.ServiceProvider);
 
         var serviceRouteBuilder = builder.ServiceProvider.GetRequiredService<ProxyServiceRouteBuilder>();
-        var endpointConventionBuilders = serviceRouteBuilder.Build(builder);
 
+        UnTypedServerCallHandler? fallbackHandler = null;
+        string? fallbackAddress = builder.ServiceProvider.GetRequiredService<IOptions<GrpcProxyOptions>>().Value.FallbackAddress;
+        if (!string.IsNullOrWhiteSpace(fallbackAddress))
+            fallbackHandler = builder.ServiceProvider.GetRequiredService<ProxyServerCallHandlerFactory>().CreateUnTyped(fallbackAddress);
+        var endpointConventionBuilders = serviceRouteBuilder.Build(builder, fallbackHandler);
         return new GrpcServiceEndpointConventionBuilder(endpointConventionBuilders);
     }
 
