@@ -33,11 +33,7 @@ internal class ProxyProviderServiceBinder : ServiceBinderBase
         where TRequest : class
         where TResponse : class
     {
-        //var (invoker, metadata) = CreateModelCore<ServerStreamingServerMethod<TService, TRequest, TResponse>>(
-        //    method.Name,
-        //    new[] { typeof(TRequest), typeof(IServerStreamWriter<TResponse>), typeof(ServerCallContext) });
-
-        //_context.AddServerStreamingMethod(method, metadata, invoker);
+        _context.AddServerStreamingMethod(method);
     }
 
     public override void AddMethod<TRequest, TResponse>(Method<TRequest, TResponse> method, UnaryServerMethod<TRequest, TResponse> handler)

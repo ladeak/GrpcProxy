@@ -28,5 +28,12 @@ namespace Service
                     Console.WriteLine($"Processing Stream {i++}");
             return new ResponseData { Message = $"Received {i}" };
         }
+
+        public override async Task StreamResult(RequestData request, IServerStreamWriter<ResponseData> responseStream, ServerCallContext context)
+        {
+            Console.WriteLine("Streaming Responses");
+            for (int i = 0; i < 5; i++)
+                await responseStream.WriteAsync(new ResponseData { Message = $"Response part {i}" });
+        }
     }
 }

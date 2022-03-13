@@ -4,8 +4,12 @@ option csharp_namespace = "Super";
 
 
 service SuperService {
+  
   rpc DoWork(RequestData) returns (ResponseData) {}
+
   rpc StreamWork(stream RequestData) returns (ResponseData) {}
+
+  rpc StreamResult(RequestData) returns (stream ResponseData) {}
 }
 
 message RequestData {

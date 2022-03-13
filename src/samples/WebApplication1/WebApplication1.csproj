@@ -11,8 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="SuperService.proto" GrpcServices="Server" />
+    <Protobuf Include="..\..\SuperService.proto" GrpcServices="Server">
+      <Link>SuperService.proto</Link>
+    </Protobuf>
   </ItemGroup>
-
 
 </Project>

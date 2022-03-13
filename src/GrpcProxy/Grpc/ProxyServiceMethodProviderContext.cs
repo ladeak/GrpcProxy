@@ -26,14 +26,13 @@ public class ProxyServiceMethodProviderContext
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 
-    //public void AddServerStreamingMethod<TService, TRequest, TResponse>(Method<TRequest, TResponse> method, IList<object> metadata, ServerStreamingServerMethod<TService, TRequest, TResponse> invoker)
-    //    where TRequest : class
-    //    where TResponse : class
-    //    where TService : class
-    //{
-    //    var callHandler = _serverCallHandlerFactory.CreateServerStreaming(method, invoker);
-    //    AddMethod(method, RoutePatternFactory.Parse(method.FullName), metadata, callHandler.HandleCallAsync);
-    //}
+    public void AddServerStreamingMethod<TRequest, TResponse>(Method<TRequest, TResponse> method)
+        where TRequest : class
+        where TResponse : class
+    {
+        var callHandler = _serverCallHandlerFactory.CreateServerStreaming(method, _serviceAddress);
+        AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
+    }
 
     public void AddClientStreamingMethod<TRequest, TResponse>(Method<TRequest, TResponse> method)
         where TRequest : class

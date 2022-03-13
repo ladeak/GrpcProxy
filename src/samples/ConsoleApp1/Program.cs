@@ -1,4 +1,5 @@
-﻿using Grpc.Net.Client;
+﻿using Grpc.Core;
+using Grpc.Net.Client;
 using Super;
 
 namespace NameClient;
@@ -7,7 +8,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("Select and press Enter to send message: u - Unary, c - Client Streaming");
+        Console.WriteLine("Select and press Enter to send message: u - Unary, c - Client Streaming, s - Server Streaming");
         var key = Console.ReadLine()?.FirstOrDefault() ?? 'n';
         SuperService.SuperServiceClient client;
         GrpcChannel channel;
@@ -25,6 +26,9 @@ class Program
                     case 'c':
                         await ClientStreamingAsync(client);
                         break;
+                    case 's':
+                        await ServerStreamingAsync(client);
+                        break;
                 }
             }
             catch (Exception e)
@@ -37,6 +41,13 @@ class Program
             }
         }
         channel.Dispose();
+    }
+
+    private static async Task ServerStreamingAsync(SuperService.SuperServiceClient client)
+    {
+        var result = client.StreamResult(new RequestData() { Message = "Requesting Streamed Data" });
+        await foreach (var response in result.ResponseStream.ReadAllAsync())
+            Console.WriteLine(response.Message);
     }
 
     private static async Task UnaryMessageAsync(SuperService.SuperServiceClient client)
