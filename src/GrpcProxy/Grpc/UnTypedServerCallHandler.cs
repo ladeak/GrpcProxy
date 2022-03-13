@@ -36,12 +36,12 @@ internal class UnTypedServerCallHandler : ProxyServerCallHandlerBase<string, str
         var requestPipe = new Pipe();
         var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, requestPipe.Writer, serverCallContext.CancellationToken);
         var requestData = await requestPipe.Reader.ReadSingleMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer);
-        await _messageMediator.AddRequest(httpContext, proxyCallId, _method.Type, requestData);
+        await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, requestData);
 
         var responsePipe = new Pipe();
         await _httpForwarder.ReturnResponseAsync(httpContext, sending.Item1, sending.Item2, HttpTransformer.Empty, responsePipe.Writer, serverCallContext.CancellationToken);
         var responseData = await responsePipe.Reader.ReadSingleMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer);
-        await _messageMediator.AddResponse(sending.Item1, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData);
+        await _messageMediator.AddResponseAsync(sending.Item1, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData);
     }
 
     private static string Deserialize(DeserializationContext context) => ProtoCompiler.Deserialize(context.PayloadAsReadOnlySequence());

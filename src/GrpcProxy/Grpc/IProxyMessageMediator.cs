@@ -7,8 +7,8 @@ namespace GrpcProxy.Grpc
     {
         ChannelReader<ProxyMessage> ChannelReader { get; }
 
-        ValueTask AddRequest(HttpContext context, Guid proxyCallId, MethodType methodType, string data);
+        ValueTask AddRequestAsync(HttpContext context, Guid proxyCallId, MethodType methodType, string data);
 
-        ValueTask AddResponse(HttpResponseMessage response, string serviceAddress, Guid proxyCallId, string path, MethodType methodType, string data);
+        ValueTask AddResponseAsync(HttpResponseMessage response, string serviceAddress, Guid proxyCallId, string path, MethodType methodType, string data);
     }
 }

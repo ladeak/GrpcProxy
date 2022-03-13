@@ -46,9 +46,7 @@ internal class ProxyServiceRepository : IProxyServiceRepository
 
         if (bindMethodInfo != null)
         {
-            // The second parameter is always the service base type
-            var serviceParameter = bindMethodInfo.GetParameters()[1];
-            var binder = new ProxyProviderServiceBinder(context, serviceParameter.ParameterType, baseService);
+            var binder = new ProxyProviderServiceBinder(context);
             try
             {
                 bindMethodInfo.Invoke(null, new object?[] { binder, null });

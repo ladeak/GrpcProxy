@@ -36,11 +36,11 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
         var requestPipe = new Pipe();
         var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, requestPipe.Writer, serverCallContext.CancellationToken);
         var requestData = await requestPipe.Reader.ReadSingleMessageAsync<TRequest>(serverCallContext, _method.RequestMarshaller.ContextualDeserializer);
-        await _messageMediator.AddRequest(httpContext, proxyCallId, _method.Type, requestData?.ToString() ?? string.Empty);
+        await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, requestData?.ToString() ?? string.Empty);
 
         var responsePipe = new Pipe();
         await _httpForwarder.ReturnResponseAsync(httpContext, sending.Item1, sending.Item2, HttpTransformer.Empty, responsePipe.Writer, serverCallContext.CancellationToken);
         var responseData = await responsePipe.Reader.ReadSingleMessageAsync<TResponse>(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer);
-        await _messageMediator.AddResponse(sending.Item1, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData?.ToString() ?? string.Empty);
+        await _messageMediator.AddResponseAsync(sending.Item1, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData?.ToString() ?? string.Empty);
     }
 }

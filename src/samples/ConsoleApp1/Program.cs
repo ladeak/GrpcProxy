@@ -7,30 +7,25 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("Press enter to send message");
-        Console.ReadLine();
+        Console.WriteLine("Select and press Enter to send message: u - Unary, c - Client Streaming");
+        var key = Console.ReadLine()?.FirstOrDefault() ?? 'n';
         SuperService.SuperServiceClient client;
         GrpcChannel channel;
         channel = GrpcChannel.ForAddress("https://localhost:7012");
         client = new SuperService.SuperServiceClient(channel);
-        char key = (char)0;
         while (key != 'e')
         {
             try
             {
-                RequestData request;
-                //request = new RequestData() { Message = "Pocak" };
-                //var response = await client.DoWorkAsync(request);
-                //Console.WriteLine(response.Message);
-
-                using var streamOfWork = client.StreamWork();
-                for (int i = 0; i < 5; i++)
+                switch (key)
                 {
-                    request = new RequestData() { Message = "Pocak" };
-                    await streamOfWork.RequestStream.WriteAsync(request);
+                    case 'u':
+                        await UnaryMessageAsync(client);
+                        break;
+                    case 'c':
+                        await ClientStreamingAsync(client);
+                        break;
                 }
-                await streamOfWork.RequestStream.CompleteAsync();
-                Console.WriteLine((await streamOfWork).Message);
             }
             catch (Exception e)
             {
@@ -38,10 +33,29 @@ class Program
             }
             finally
             {
-                key = Console.ReadKey().KeyChar;
+                key = Console.ReadLine()?.FirstOrDefault() ?? 'n';
             }
         }
         channel.Dispose();
+    }
+
+    private static async Task UnaryMessageAsync(SuperService.SuperServiceClient client)
+    {
+        var request = new RequestData() { Message = "Pocak" };
+        var response = await client.DoWorkAsync(request);
+        Console.WriteLine(response.Message);
+    }
+
+    private static async Task ClientStreamingAsync(SuperService.SuperServiceClient client)
+    {
+        using var streamOfWork = client.StreamWork();
+        for (int i = 0; i < 5; i++)
+        {
+            var request = new RequestData() { Message = "Pocak" };
+            await streamOfWork.RequestStream.WriteAsync(request);
+        }
+        await streamOfWork.RequestStream.CompleteAsync();
+        Console.WriteLine((await streamOfWork).Message);
     }
 }
 

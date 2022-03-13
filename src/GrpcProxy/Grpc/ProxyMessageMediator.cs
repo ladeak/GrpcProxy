@@ -10,7 +10,7 @@ public class ProxyMessageMediator : IProxyMessageMediator
 
     public ChannelReader<ProxyMessage> ChannelReader => _channel.Reader;
 
-    public ValueTask AddRequest(HttpContext context, Guid proxyCallId, MethodType methodType, string data)
+    public ValueTask AddRequestAsync(HttpContext context, Guid proxyCallId, MethodType methodType, string data)
     {
         var message = new ProxyMessage(
             proxyCallId,
@@ -22,7 +22,7 @@ public class ProxyMessageMediator : IProxyMessageMediator
         return _channel.Writer.WriteAsync(message);
     }
 
-    public ValueTask AddResponse(HttpResponseMessage response, string serviceAddress, Guid proxyCallId, string path, MethodType methodType, string data)
+    public ValueTask AddResponseAsync(HttpResponseMessage response, string serviceAddress, Guid proxyCallId, string path, MethodType methodType, string data)
     {
         var message = new ProxyMessage(
             proxyCallId,
