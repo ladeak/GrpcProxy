@@ -15,7 +15,7 @@ internal sealed class HttpForwarder
     public async ValueTask<(HttpResponseMessage, StreamCopyHttpContent?)> SendRequestAsync(
         HttpContext context,
         string destinationPrefix,
-        HttpMessageInvoker httpClient,
+        HttpClient httpClient,
         HttpTransformer transformer,
         PipeWriter pipeWriter,
         CancellationToken token)
@@ -35,7 +35,7 @@ internal sealed class HttpForwarder
         HttpResponseMessage destinationResponse;
         try
         {
-            destinationResponse = await httpClient.SendAsync(destinationRequest, token);
+            destinationResponse = await httpClient.SendAsync(destinationRequest, HttpCompletionOption.ResponseHeadersRead, token);
         }
         catch (Exception)
         {

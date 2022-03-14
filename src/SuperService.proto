@@ -10,6 +10,8 @@ service SuperService {
   rpc StreamWork(stream RequestData) returns (ResponseData) {}
 
   rpc StreamResult(RequestData) returns (stream ResponseData) {}
+
+  rpc DuplexStreaming(stream RequestData) returns (stream ResponseData) {}
 }
 
 message RequestData {

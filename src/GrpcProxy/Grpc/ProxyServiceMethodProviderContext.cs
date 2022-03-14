@@ -42,14 +42,13 @@ public class ProxyServiceMethodProviderContext
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 
-    //public void AddDuplexStreamingMethod<TService, TRequest, TResponse>(Method<TRequest, TResponse> method, IList<object> metadata, DuplexStreamingServerMethod<TService, TRequest, TResponse> invoker)
-    //    where TRequest : class
-    //    where TResponse : class
-    //    where TService : class
-    //{
-    //    var callHandler = _serverCallHandlerFactory.CreateDuplexStreaming(method, invoker);
-    //    AddMethod(method, RoutePatternFactory.Parse(method.FullName), metadata, callHandler.HandleCallAsync);
-    //}
+    public void AddDuplexStreamingMethod<TRequest, TResponse>(Method<TRequest, TResponse> method)
+        where TRequest : class
+        where TResponse : class
+    {
+        var callHandler = _serverCallHandlerFactory.CreateDuplexStreaming(method, _serviceAddress);
+        AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
+    }
 
     public void AddMethod<TRequest, TResponse>(Method<TRequest, TResponse> method, RoutePattern pattern, RequestDelegate invoker)
         where TRequest : class

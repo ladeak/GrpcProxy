@@ -22,11 +22,7 @@ internal class ProxyProviderServiceBinder : ServiceBinderBase
         where TRequest : class
         where TResponse : class
     {
-        //var (invoker, metadata) = CreateModelCore<DuplexStreamingServerMethod<TService, TRequest, TResponse>>(
-        //    method.Name,
-        //    new[] { typeof(IAsyncStreamReader<TRequest>), typeof(IServerStreamWriter<TResponse>), typeof(ServerCallContext) });
-
-        //_context.AddDuplexStreamingMethod(method, metadata, invoker);
+        _context.AddDuplexStreamingMethod(method);
     }
 
     public override void AddMethod<TRequest, TResponse>(Method<TRequest, TResponse> method, ServerStreamingServerMethod<TRequest, TResponse> handler)

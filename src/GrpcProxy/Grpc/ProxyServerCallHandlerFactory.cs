@@ -51,16 +51,12 @@ internal partial class ProxyServerCallHandlerFactory
         return new ProxyClientStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _httpClientFactory, _mediator, _loggerFactory, serviceAddress);
     }
 
-    //public DuplexStreamingServerCallHandler<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method)
-    //    where TRequest : class
-    //    where TResponse : class
-    //{
-    //    var options = CreateMethodOptions();
-    //    throw new NotImplementedException();
-    //    //var methodInvoker = new DuplexStreamingServerMethodInvoker<TService, TRequest, TResponse>(invoker, method, options, _serviceActivator);
-
-    //    //return new DuplexStreamingServerCallHandler<TService, TRequest, TResponse>(methodInvoker, _loggerFactory);
-    //}
+    public ProxyDuplexStreamingServerCallHandler<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
+        where TRequest : class
+        where TResponse : class
+    {
+       return new ProxyDuplexStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _httpClientFactory, _mediator, _loggerFactory, serviceAddress);
+    }
 
     public ProxyServerStreamingServerCallHandler<TRequest, TResponse> CreateServerStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
         where TRequest : class
