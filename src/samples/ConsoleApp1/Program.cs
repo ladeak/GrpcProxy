@@ -10,10 +10,8 @@ class Program
     {
         Console.WriteLine("Select and press Enter to send message: u - Unary, c - Client Streaming, s - Server Streaming, d - Duplex Streaming, f - Duplex Synced Streaming");
         var key = Console.ReadLine()?.FirstOrDefault() ?? 'n';
-        SuperService.SuperServiceClient client;
-        GrpcChannel channel;
-        channel = GrpcChannel.ForAddress("https://localhost:7012");
-        client = new SuperService.SuperServiceClient(channel);
+        GrpcChannel channel = GrpcChannel.ForAddress("https://localhost:7012");
+        SuperService.SuperServiceClient client = new SuperService.SuperServiceClient(channel);
         while (key != 'e')
         {
             try

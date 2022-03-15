@@ -39,6 +39,8 @@ namespace GrpcProxy.Grpc
             var requestPipe = new Pipe();
             var responsePipe = new Pipe();
 
+            serverCallContext.CancellationToken.Register(_ => { Console.WriteLine("cancellation requested"); }, null, false);
+
             var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, requestPipe.Writer, serverCallContext.CancellationToken);
             var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext, proxyCallId, requestPipe);
 
@@ -46,15 +48,15 @@ namespace GrpcProxy.Grpc
             var deserializingResponseTask = DeserializingResponseAsync(httpContext, serverCallContext, proxyCallId, sending.Item1, responsePipe);
 
             await deserializingRequestTask;
-            await returningResponseTask;
             await deserializingResponseTask;
+            await returningResponseTask;
         }
 
         private async ValueTask DeserializingRequestsAsync(HttpContext httpContext, HttpContextServerCallContext serverCallContext, Guid proxyCallId, Pipe requestPipe)
         {
-            while (!serverCallContext.CancellationToken.IsCancellationRequested)
+            while (true)
             {
-                var message = await requestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, serverCallContext.CancellationToken);
+                var message = await requestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, CancellationToken.None);
                 if (message == null)
                     break;
                 await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, message?.ToString() ?? string.Empty);
@@ -63,9 +65,9 @@ namespace GrpcProxy.Grpc
 
         private async ValueTask DeserializingResponseAsync(HttpContext httpContext, HttpContextServerCallContext serverCallContext, Guid proxyCallId, HttpResponseMessage response, Pipe responsePipe)
         {
-            while (!serverCallContext.CancellationToken.IsCancellationRequested)
+            while (true)
             {
-                var message = await responsePipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, serverCallContext.CancellationToken);
+                var message = await responsePipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer, CancellationToken.None);
                 if (message == null)
                     break;
                 await _messageMediator.AddResponseAsync(response, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, message?.ToString() ?? string.Empty);
