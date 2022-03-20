@@ -72,7 +72,6 @@
 		if (Model.File == null || !Uri.IsWellFormedUriString(Model.ServiceAddress, UriKind.Absolute))
 			return;
 		var tempFile = Path.Combine(Path.GetTempPath(), Model.File!.Name);
-		_logger.LogInformation($"Loading file temporary to {tempFile}");
 		try
 		{
 			await using FileStream fs = new(tempFile, FileMode.Create);
