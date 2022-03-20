@@ -14,17 +14,20 @@ public class ProtoCompiler
             FileName = Path.Combine(packagePath, Environment.OSVersion.Platform == PlatformID.Win32NT ? "protoc.exe" : "protoc")
         };
         var tempPath = Path.GetTempPath();
+        Console.WriteLine($"ProtoCompiler - packagePath: {packagePath}");
         Console.WriteLine($"ProtoCompiler - tempPath: {filePath}");
-        Console.WriteLine($"ProtoCompiler - tempPath: {tempPath}");
+        Console.WriteLine($"ProtoCompiler - filePath: {tempPath}");
         Console.WriteLine($"ProtoCompiler - proto_path1: {Path.GetDirectoryName(filePath)}");
         Console.WriteLine($"ProtoCompiler - proto_path2: {Environment.CurrentDirectory}");
         Console.WriteLine($"ProtoCompiler - proto_path3: {Path.GetDirectoryName(Environment.ProcessPath)}");
         startInfo.ArgumentList.Add($"--proto_path={Path.GetDirectoryName(filePath)}");
         startInfo.ArgumentList.Add($"--proto_path={Environment.CurrentDirectory}");
         startInfo.ArgumentList.Add($"--proto_path={Path.GetDirectoryName(Environment.ProcessPath)}");
+        startInfo.ArgumentList.Add($"--proto_path={packagePath}");
         startInfo.ArgumentList.Add($"--csharp_out={tempPath}");
         startInfo.ArgumentList.Add($"--grpc_out={tempPath}");
-        startInfo.ArgumentList.Add($"--plugin=protoc-gen-grpc=grpc_csharp_plugin.exe");
+        var pluginPath = Path.Combine(packagePath, Environment.OSVersion.Platform == PlatformID.Win32NT ? "grpc_csharp_plugin.exe" : "grpc_csharp_plugin");
+        startInfo.ArgumentList.Add($"--plugin=protoc-gen-grpc={pluginPath}");
 
         startInfo.ArgumentList.Add(filePath);
         startInfo.CreateNoWindow = true;
@@ -34,6 +37,9 @@ public class ProtoCompiler
         {
             StartInfo = startInfo,
         };
+        Console.WriteLine(process.StartInfo.Arguments);
+        Console.WriteLine(process.StartInfo.UseShellExecute);
+        Console.WriteLine(process.StartInfo.WorkingDirectory);
         process.Start();
         await process.WaitForExitAsync();
 
