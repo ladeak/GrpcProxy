@@ -14,6 +14,11 @@ public class ProtoCompiler
             FileName = Path.Combine(packagePath, Environment.OSVersion.Platform == PlatformID.Win32NT ? "protoc.exe" : "protoc")
         };
         var tempPath = Path.GetTempPath();
+        Console.WriteLine($"ProtoCompiler - tempPath: {filePath}");
+        Console.WriteLine($"ProtoCompiler - tempPath: {tempPath}");
+        Console.WriteLine($"ProtoCompiler - proto_path1: {Path.GetDirectoryName(filePath)}");
+        Console.WriteLine($"ProtoCompiler - proto_path2: {Environment.CurrentDirectory}");
+        Console.WriteLine($"ProtoCompiler - proto_path3: {Path.GetDirectoryName(Environment.ProcessPath)}");
         startInfo.ArgumentList.Add($"--proto_path={Path.GetDirectoryName(filePath)}");
         startInfo.ArgumentList.Add($"--proto_path={Environment.CurrentDirectory}");
         startInfo.ArgumentList.Add($"--proto_path={Path.GetDirectoryName(Environment.ProcessPath)}");

@@ -3,6 +3,7 @@
 @using GrpcProxy.Grpc
 @using System.ComponentModel.DataAnnotations
 @inject IProxyServiceRepository _serviceRepo
+@inject ILogger<Protos> _logger
 
 <div class="card">
 	<div class="card-body">
@@ -71,6 +72,7 @@
 		if (Model.File == null || !Uri.IsWellFormedUriString(Model.ServiceAddress, UriKind.Absolute))
 			return;
 		var tempFile = Path.Combine(Path.GetTempPath(), Model.File!.Name);
+		_logger.LogInformation($"Loading file temporary to {tempFile}");
 		try
 		{
 			await using FileStream fs = new(tempFile, FileMode.Create);
@@ -81,6 +83,7 @@
 		}
 		catch (Exception ex)
 		{
+			_logger.LogError(ex, "Could not load file");
 			Error = ex.Message;
 		}
 		finally
