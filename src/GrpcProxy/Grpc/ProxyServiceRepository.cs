@@ -2,7 +2,7 @@
 
 namespace GrpcProxy.Grpc;
 
-public record class ProxyService(string ServiceAddress, string FilePath, ProxyServiceAssemblyContext AssemblyContext, Type BaseService, List<string> Endpoints);
+public record class ProxyService(GrpcProxyMapping Mapping, ProxyServiceAssemblyContext AssemblyContext, Type BaseService, List<string> Endpoints);
 
 internal class ProxyServiceRepository : IProxyServiceRepository
 {
@@ -16,15 +16,15 @@ internal class ProxyServiceRepository : IProxyServiceRepository
         _serviceMethodsRegistry = serviceMethodsRegistry ?? throw new ArgumentNullException(nameof(serviceMethodsRegistry));
     }
 
-    public void AddService(Type baseService, string address, string protoFile, ProxyServiceAssemblyContext context)
+    public void AddService(Type baseService, GrpcProxyMapping mapping, ProxyServiceAssemblyContext context)
     {
-        if (_services.ContainsKey(protoFile))
-            RemoveService(protoFile);
-        var serviceMethodProviderContext = new ProxyServiceMethodProviderContext(_serverCallHandlerFactory, address);
+        if (_services.ContainsKey(mapping.ProtoPath))
+            RemoveService(mapping.ProtoPath);
+        var serviceMethodProviderContext = new ProxyServiceMethodProviderContext(_serverCallHandlerFactory, mapping);
         ServiceMethodDiscovery(serviceMethodProviderContext, baseService);
         foreach (var method in serviceMethodProviderContext.Methods)
             _serviceMethodsRegistry.Methods.AddOrUpdate(method.Pattern.RawText!, method, (_, __) => method);
-        _services.Add(protoFile, new ProxyService(address, protoFile, context, baseService, _serviceMethodsRegistry.Methods.Select(x => x.Value.Pattern.RawText!).ToList()));
+        _services.Add(mapping.ProtoPath, new ProxyService(mapping, context, baseService, _serviceMethodsRegistry.Methods.Select(x => x.Value.Pattern.RawText!).ToList()));
     }
 
     public void RemoveService(string protoFile)

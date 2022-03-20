@@ -7,12 +7,12 @@ namespace GrpcProxy.Grpc;
 public class ProxyServiceMethodProviderContext
 {
     private readonly ProxyServerCallHandlerFactory _serverCallHandlerFactory;
-    private readonly string _serviceAddress;
+    private readonly ProxyBehaviorOptions _options;
 
-    internal ProxyServiceMethodProviderContext(ProxyServerCallHandlerFactory serverCallHandlerFactory, string serviceAddress)
+    internal ProxyServiceMethodProviderContext(ProxyServerCallHandlerFactory serverCallHandlerFactory, ProxyBehaviorOptions options)
     {
         _serverCallHandlerFactory = serverCallHandlerFactory ?? throw new ArgumentNullException(nameof(serverCallHandlerFactory));
-        _serviceAddress = serviceAddress ?? throw new ArgumentNullException(nameof(serviceAddress));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         Methods = new List<MethodModel>();
     }
 
@@ -22,7 +22,7 @@ public class ProxyServiceMethodProviderContext
         where TRequest : class
         where TResponse : class
     {
-        var callHandler = _serverCallHandlerFactory.CreateUnary(method, _serviceAddress);
+        var callHandler = _serverCallHandlerFactory.CreateUnary(method, _options);
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 
@@ -30,7 +30,7 @@ public class ProxyServiceMethodProviderContext
         where TRequest : class
         where TResponse : class
     {
-        var callHandler = _serverCallHandlerFactory.CreateServerStreaming(method, _serviceAddress);
+        var callHandler = _serverCallHandlerFactory.CreateServerStreaming(method, _options);
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 
@@ -38,7 +38,7 @@ public class ProxyServiceMethodProviderContext
         where TRequest : class
         where TResponse : class
     {
-        var callHandler = _serverCallHandlerFactory.CreateClientStreaming(method, _serviceAddress);
+        var callHandler = _serverCallHandlerFactory.CreateClientStreaming(method, _options);
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 
@@ -46,7 +46,7 @@ public class ProxyServiceMethodProviderContext
         where TRequest : class
         where TResponse : class
     {
-        var callHandler = _serverCallHandlerFactory.CreateDuplexStreaming(method, _serviceAddress);
+        var callHandler = _serverCallHandlerFactory.CreateDuplexStreaming(method, _options);
         AddMethod(method, RoutePatternFactory.Parse(method.FullName), callHandler.HandleCallAsync);
     }
 

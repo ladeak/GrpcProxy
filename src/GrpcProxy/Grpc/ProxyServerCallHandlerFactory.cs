@@ -27,9 +27,9 @@ internal partial class ProxyServerCallHandlerFactory
         _globalOptions = globalOptions.Value;
     }
 
-    internal MethodOptions CreateMethodOptions()
+    internal MethodOptions CreateMethodOptions(ProxyBehaviorOptions options)
     {
-        return MethodOptions.Create(new[] { _globalOptions });
+        return MethodOptions.Create(new[] { _globalOptions, new GrpcServiceOptions() { EnableDetailedErrors = options.EnableDetailedErrors, MaxReceiveMessageSize = options.MaxMessageSize } });
     }
 
     public UnTypedServerCallHandler CreateUnTyped(string serviceAddress)
@@ -37,32 +37,32 @@ internal partial class ProxyServerCallHandlerFactory
         return new UnTypedServerCallHandler(_loggerFactory, _httpClientFactory, _mediator, serviceAddress);
     }
 
-    public ProxyUnaryServerCallHandler<TRequest, TResponse> CreateUnary<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
+    public ProxyUnaryServerCallHandler<TRequest, TResponse> CreateUnary<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyUnaryServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _loggerFactory, _httpClientFactory, _mediator, serviceAddress);
+        return new ProxyUnaryServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _loggerFactory, _httpClientFactory, _mediator, options.Address);
     }
 
-    public ProxyClientStreamingServerCallHandler<TRequest, TResponse> CreateClientStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
+    public ProxyClientStreamingServerCallHandler<TRequest, TResponse> CreateClientStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyClientStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _httpClientFactory, _mediator, _loggerFactory, serviceAddress);
+        return new ProxyClientStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
     }
 
-    public ProxyDuplexStreamingServerCallHandler<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
+    public ProxyDuplexStreamingServerCallHandler<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-       return new ProxyDuplexStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _httpClientFactory, _mediator, _loggerFactory, serviceAddress);
+       return new ProxyDuplexStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
     }
 
-    public ProxyServerStreamingServerCallHandler<TRequest, TResponse> CreateServerStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, string serviceAddress)
+    public ProxyServerStreamingServerCallHandler<TRequest, TResponse> CreateServerStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyServerStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(), method, _httpClientFactory, _mediator, _loggerFactory, serviceAddress);
+        return new ProxyServerStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
     }
 }
 

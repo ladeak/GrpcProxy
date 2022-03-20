@@ -25,12 +25,10 @@ app.UseRouting();
 app.MapGrpcService();
 
 var startupMapping = app.Services.GetRequiredService<IOptions<GrpcProxyMapping>>().Value;
-if (startupMapping.Address != null && startupMapping.ProtoPath != null)
-    await ProtoLoader.LoadProtoFileAsync(app.Services.GetRequiredService<IProxyServiceRepository>(), startupMapping.Address, startupMapping.ProtoPath);
+await ProtoLoader.LoadProtoFileAsync(app.Services.GetRequiredService<IProxyServiceRepository>(), startupMapping);
 var protoOptions = app.Services.GetRequiredService<IOptions<GrpcProxyOptions>>().Value;
 foreach (var mapping in protoOptions.Mappings ?? Enumerable.Empty<GrpcProxyMapping>())
-    if (mapping.Address != null && mapping.ProtoPath != null)
-        await ProtoLoader.LoadProtoFileAsync(app.Services.GetRequiredService<IProxyServiceRepository>(), mapping.Address, mapping.ProtoPath);
+    await ProtoLoader.LoadProtoFileAsync(app.Services.GetRequiredService<IProxyServiceRepository>(), mapping);
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
