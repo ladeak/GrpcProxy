@@ -16,9 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.20.0-rc1" />
-    <PackageReference Include="Grpc.Core.Api" Version="2.44.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.20.0-rc2" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.45.0-pre1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0-1.final" />
   </ItemGroup>
 
   <ItemGroup>
