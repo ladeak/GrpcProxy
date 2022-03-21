@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Net;
 using GrpcProxy.AspNetCore;
 using Microsoft.AspNetCore.Http.Features;
@@ -12,7 +11,7 @@ internal sealed class HttpForwarder
 {
     private static readonly Version DefaultVersion = HttpVersion.Version20;
 
-    public async ValueTask<(HttpResponseMessage, StreamCopyHttpContent?)> SendRequestAsync(
+    public async ValueTask<(HttpResponseMessage ResponseMessage, StreamCopyHttpContent? StreamCopyContent)> SendRequestAsync(
         HttpContext context,
         string destinationPrefix,
         HttpClient httpClient,

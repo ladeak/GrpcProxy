@@ -30,7 +30,7 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         if (!GrpcProtocolConstants.IsHttp2(httpContext.Request.Protocol) && !GrpcProtocolConstants.IsHttp3(httpContext.Request.Protocol))
             return ProcessNonHttp2Request(httpContext);
 
-        var serverCallContext = new HttpContextServerCallContext(httpContext, _options, typeof(TRequest), typeof(TResponse), _logger);
+        var serverCallContext = new ProxyHttpContextServerCallContext(httpContext, _options, typeof(TRequest), typeof(TResponse), _logger);
         httpContext.Features.Set<IServerCallContextFeature>(serverCallContext);
 
         GrpcProtocolHelpers.AddProtocolHeaders(httpContext.Response);
@@ -46,7 +46,7 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
             return serverCallContext.ProcessHandlerErrorAsync(ex, "Unable to proxy");
         }
 
-        static async Task AwaitHandleCall(HttpContextServerCallContext serverCallContext, Task handleCall)
+        static async Task AwaitHandleCall(ProxyHttpContextServerCallContext serverCallContext, Task handleCall)
         {
             try
             {
@@ -60,7 +60,7 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         }
     }
 
-    protected abstract Task HandleCallAsyncCore(HttpContext httpContext, HttpContextServerCallContext serverCallContext);
+    protected abstract Task HandleCallAsyncCore(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext);
 
     private Task ProcessNonHttp2Request(HttpContext httpContext)
     {
