@@ -16,12 +16,20 @@
 			<DataAnnotationsValidator />
 			<ValidationSummary />
 			<div class="mb-3">
-				<label for="formGroupExampleInput" class="form-label">Service Address:</label>
+				<label class="form-label">Service Address:</label>
 				<InputText @bind-Value="Model.ServiceAddress" />
 			</div>
 			<div class="mb-3">
-				<label for="formGroupExampleInput" class="form-label">Proto File:</label>
+				<label class="form-label">Proto File:</label>
 				<InputFile OnChange="@LoadFiles" />
+			</div>
+			<div class="mb-3">
+				<label class="form-label">Enable Detailed Errors:</label>
+				<InputCheckbox @bind-Value="Model.EnableDetailedErrors" />
+			</div>
+			<div class="mb-3">
+				<label class="form-label">Max Message Size (bytes):</label>
+				<InputNumber @bind-Value="Model.MaxMessageSize" />
 			</div>
 			<button type="submit" class="btn btn-success" disabled="@(!context.Validate())">Add Proto</button>
 		</EditForm>
@@ -60,6 +68,10 @@
 
 		[Required]
 		public Microsoft.AspNetCore.Components.Forms.IBrowserFile? File { get; set; }
+
+		public bool EnableDetailedErrors { get; set; }
+
+		public int? MaxMessageSize { get; set; }
 	}
 
 	public ProtoModel Model { get; set; } = new ProtoModel();
@@ -78,7 +90,7 @@
 			await Model.File.OpenReadStream().CopyToAsync(fs);
 			await fs.FlushAsync();
 			fs.Close();
-			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, new GrpcProxyMapping() { Address = Model.ServiceAddress!, ProtoPath = tempFile });
+			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, new GrpcProxyMapping() { Address = Model.ServiceAddress!, ProtoPath = tempFile, EnableDetailedErrors = Model.EnableDetailedErrors, MaxMessageSize = Model.MaxMessageSize });
 		}
 		catch (Exception ex)
 		{
