@@ -20,7 +20,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     private Activity? _activity;
     private DefaultDeserializationContext? _requestDeserializationContext;
     private DefaultDeserializationContext? _responseDeserializationContext;
-    private HttpResponseMessage _proxiedResponse;
+    private HttpResponseMessage? _proxiedResponse;
 
     internal ProxyHttpContextServerCallContext(HttpContext httpContext, MethodOptions options, Type requestType, Type responseType, ILogger logger)
     {
