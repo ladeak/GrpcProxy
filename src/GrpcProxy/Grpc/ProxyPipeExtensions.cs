@@ -90,8 +90,6 @@ internal static partial class ProxyPipeExtensions
 
         try
         {
-            GrpcServerLog.ReadingMessage(logger);
-
             T? request = null;
 
             while (true)
@@ -115,16 +113,10 @@ internal static partial class ProxyPipeExtensions
 
                         if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
                         {
-                            // Finished and the complete message has arrived
-                            GrpcServerLog.DeserializingMessage(logger, (int)data.GetValueOrDefault().Length, typeof(T));
                             if (direction == MessageDirection.Request)
                                 request = DeserializeRequest(serverCallContext, deserializer, data);
                             else
                                 request = DeserializeResponse(serverCallContext, deserializer, data);
-
-                            GrpcServerLog.ReceivedMessage(logger);
-
-                            GrpcEventSource.Log.MessageReceived();
 
                             // Store the request
                             // Need to verify the request completes with no additional data
@@ -165,7 +157,6 @@ internal static partial class ProxyPipeExtensions
         }
         catch (Exception ex)
         {
-            GrpcServerLog.ErrorReadingMessage(logger, ex);
             throw;
         }
     }
@@ -176,8 +167,6 @@ internal static partial class ProxyPipeExtensions
         var logger = serverCallContext.Logger;
         try
         {
-            GrpcServerLog.ReadingMessage(logger);
-
             while (true)
             {
                 var completeMessage = false;
@@ -196,19 +185,11 @@ internal static partial class ProxyPipeExtensions
                         if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
                         {
                             completeMessage = true;
-
-                            GrpcServerLog.DeserializingMessage(logger, (int)data.Value.Length, typeof(T));
-
                             T request;
                             if (direction == MessageDirection.Request)
                                 request = DeserializeRequest(serverCallContext, deserializer, data);
                             else
                                 request = DeserializeResponse(serverCallContext, deserializer, data);
-
-                            GrpcServerLog.ReceivedMessage(logger);
-
-                            GrpcEventSource.Log.MessageReceived();
-
                             return request;
                         }
                     }
@@ -218,7 +199,6 @@ internal static partial class ProxyPipeExtensions
                         if (buffer.Length == 0)
                         {
                             // Finished and there is no more data
-                            GrpcServerLog.NoMessageReturned(logger);
                             return default;
                         }
 
@@ -244,7 +224,6 @@ internal static partial class ProxyPipeExtensions
         catch (Exception ex) when (!(ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
         {
             // Don't write error when user cancels read
-            GrpcServerLog.ErrorReadingMessage(logger, ex);
             throw;
         }
     }
@@ -284,7 +263,7 @@ internal static partial class ProxyPipeExtensions
             }
 
             // Performance improvement would be to decompress without converting to an intermediary byte array
-            if (!TryDecompressMessage(context.Logger, encoding, context.Options.CompressionProviders, messageBuffer, out var decompressedMessage))
+            if (!TryDecompressMessage(encoding, context.Options.CompressionProviders, messageBuffer, out var decompressedMessage))
             {
                 // https://github.com/grpc/grpc/blob/master/doc/compression.md#test-cases
                 // A message compressed by a client in a way not supported by its server MUST fail with status UNIMPLEMENTED,
@@ -319,12 +298,10 @@ internal static partial class ProxyPipeExtensions
         return null;
     }
 
-    private static bool TryDecompressMessage(ILogger logger, string compressionEncoding, IReadOnlyDictionary<string, ICompressionProvider> compressionProviders, in ReadOnlySequence<byte> messageData, [NotNullWhen(true)] out ReadOnlySequence<byte>? result)
+    private static bool TryDecompressMessage(string compressionEncoding, IReadOnlyDictionary<string, ICompressionProvider> compressionProviders, in ReadOnlySequence<byte> messageData, [NotNullWhen(true)] out ReadOnlySequence<byte>? result)
     {
         if (compressionProviders.TryGetValue(compressionEncoding, out var compressionProvider))
         {
-            GrpcServerLog.DecompressingMessage(logger, compressionProvider.EncodingName);
-
             var output = new MemoryStream();
             using (var compressionStream = compressionProvider.CreateDecompressionStream(new ReadOnlySequenceStream(messageData)))
             {

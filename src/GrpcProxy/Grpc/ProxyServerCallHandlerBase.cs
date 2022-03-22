@@ -27,7 +27,7 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         if (GrpcProtocolHelpers.IsInvalidContentType(httpContext, out var error))
             return ProcessInvalidContentTypeRequest(httpContext, error);
 
-        if (!GrpcProtocolConstants.IsHttp2(httpContext.Request.Protocol) && !GrpcProtocolConstants.IsHttp3(httpContext.Request.Protocol))
+        if (!HttpProtocol.IsHttp2(httpContext.Request.Protocol) && !HttpProtocol.IsHttp3(httpContext.Request.Protocol))
             return ProcessNonHttp2Request(httpContext);
 
         var serverCallContext = new ProxyHttpContextServerCallContext(httpContext, _options, typeof(TRequest), typeof(TResponse), _logger);
@@ -64,9 +64,8 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
 
     private Task ProcessNonHttp2Request(HttpContext httpContext)
     {
-        GrpcServerLog.UnsupportedRequestProtocol(_logger, httpContext.Request.Protocol);
         GrpcProtocolHelpers.BuildHttpErrorResponse(httpContext.Response, StatusCodes.Status426UpgradeRequired, StatusCode.Internal, $"Request protocol '{httpContext.Request.Protocol}' is not supported.");
-        httpContext.Response.Headers[HeaderNames.Upgrade] = GrpcProtocolConstants.Http2Protocol;
+        httpContext.Response.Headers[HeaderNames.Upgrade] = HttpProtocol.Http2;
         return Task.CompletedTask;
     }
 
@@ -75,14 +74,12 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         // This might be a CORS preflight request and CORS middleware hasn't been configured
         if (GrpcProtocolHelpers.IsCorsPreflightRequest(httpContext))
         {
-            GrpcServerLog.UnhandledCorsPreflightRequest(_logger);
             GrpcProtocolHelpers.BuildHttpErrorResponse(httpContext.Response, StatusCodes.Status405MethodNotAllowed, StatusCode.Internal, "Unhandled CORS preflight request received. CORS may not be configured correctly in the application.");
             httpContext.Response.Headers[HeaderNames.Allow] = HttpMethods.Post;
             return Task.CompletedTask;
         }
         else
         {
-            GrpcServerLog.UnsupportedRequestContentType(_logger, httpContext.Request.ContentType);
             GrpcProtocolHelpers.BuildHttpErrorResponse(httpContext.Response, StatusCodes.Status415UnsupportedMediaType, StatusCode.Internal, error);
             return Task.CompletedTask;
         }

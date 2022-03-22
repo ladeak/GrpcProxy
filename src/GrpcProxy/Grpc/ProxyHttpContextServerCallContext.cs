@@ -7,6 +7,7 @@ using Grpc.Core;
 using Grpc.Shared;
 using Grpc.Shared.Server;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Net.Http.Headers;
 
 namespace GrpcProxy.Grpc;
 
@@ -43,7 +44,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         get
         {
-            if (HttpContext.Request.Headers.TryGetValue(GrpcProtocolConstants.MessageEncodingHeader, out var values))
+            if (HttpContext.Request.Headers.TryGetValue(HeaderNames.GrpcEncoding, out var values))
             {
                 return values;
             }
@@ -54,7 +55,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         get
         {
-            if (_proxiedResponse?.Headers.TryGetValues(GrpcProtocolConstants.MessageEncodingHeader, out var values) ?? false)
+            if (_proxiedResponse?.Headers.TryGetValues(HeaderNames.GrpcEncoding, out var values) ?? false)
             {
                 return values.First();
             }
@@ -178,9 +179,6 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
         if (ex is RpcException rpcException)
         {
             // RpcException is thrown by client code to modify the status returned from the server.
-            // Log the status, detail and debug exception (if present).
-            // Don't log the RpcException itself to reduce log verbosity. All of its information is already captured.
-            GrpcServerLog.RpcConnectionError(Logger, rpcException.StatusCode, rpcException.Status.Detail, rpcException.Status.DebugException);
 
             // There are two sources of metadata entries on the server-side:
             // 1. serverCallContext.ResponseTrailers
@@ -196,16 +194,16 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
         }
         else
         {
-            GrpcServerLog.ErrorExecutingServiceMethod(Logger, method, ex);
-
-            var message = ErrorMessageHelper.BuildErrorMessage("Exception was thrown by handler.", ex, Options.EnableDetailedErrors);
-
+            var message = "Exception was thrown by handler.";
+            if (Options.EnableDetailedErrors ?? false)
+            {
+                message = message + " " + CommonGrpcProtocolHelpers.ConvertToRpcExceptionMessage(ex);
+            }
             // Note that the exception given to status won't be returned to the client.
             // It is still useful to set in case an interceptor accesses the status on the server.
             _status = new Status(StatusCode.Unknown, message, ex);
         }
         HttpContext.Response.ConsolidateTrailers(this);
-        LogCallEnd();
     }
 
     // If there is a deadline then we need to have our own cancellation token.
@@ -241,20 +239,6 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     private void EndCallCore()
     {
         HttpContext.Response.ConsolidateTrailers(this);
-        LogCallEnd();
-    }
-
-    private void LogCallEnd()
-    {
-        if (_activity != null)
-        {
-            _activity.AddTag(GrpcServerConstants.ActivityStatusCodeTag, _status.StatusCode.ToTrailerString());
-        }
-        if (_status.StatusCode != StatusCode.OK)
-        {
-            GrpcEventSource.Log.CallFailed(_status.StatusCode);
-        }
-        GrpcEventSource.Log.CallStop();
     }
 
 #pragma warning disable CS8764 // Nullability of return type doesn't match overridden member (possibly because of nullability attributes).
@@ -301,9 +285,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         _activity = GetHostActivity();
         if (_activity != null)
-            _activity.AddTag(GrpcServerConstants.ActivityMethodTag, MethodCore);
-
-        GrpcEventSource.Log.CallStart(MethodCore);
+            _activity.AddTag("proxy-grpc-request", MethodCore);
     }
 
     private Activity? GetHostActivity()

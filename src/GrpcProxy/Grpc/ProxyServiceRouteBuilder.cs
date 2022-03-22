@@ -18,13 +18,8 @@ internal class ProxyServiceRouteBuilder
     internal List<IEndpointConventionBuilder> Build(IEndpointRouteBuilder endpointRouteBuilder, UnTypedServerCallHandler? fallbackHandler)
     {
         var endpointConventionBuilders = new List<IEndpointConventionBuilder>();
-        CreateGenericEndpoint(endpointRouteBuilder, endpointConventionBuilders, fallbackHandler);
-        return endpointConventionBuilders;
-    }
-
-    internal void CreateGenericEndpoint(IEndpointRouteBuilder endpointRouteBuilder, List<IEndpointConventionBuilder> endpointConventionBuilders, UnTypedServerCallHandler? fallbackHandler)
-    {
         endpointConventionBuilders.Add(CreateGenericEndpoint(endpointRouteBuilder, "{genericService}/{genericMethod}", "Generic service", CreateGenericHandler(fallbackHandler)));
+        return endpointConventionBuilders;
     }
 
     private IEndpointConventionBuilder CreateGenericEndpoint(IEndpointRouteBuilder endpointRouteBuilder, string pattern, string displayName, RequestDelegate requestDelegate)
