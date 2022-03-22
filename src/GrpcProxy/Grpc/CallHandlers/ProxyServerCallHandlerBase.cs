@@ -4,7 +4,7 @@ using Grpc.Core;
 using Grpc.Shared.Server;
 using Microsoft.Net.Http.Headers;
 
-namespace GrpcProxy.Grpc;
+namespace GrpcProxy.Grpc.CallHandlers;
 
 internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
     where TRequest : class

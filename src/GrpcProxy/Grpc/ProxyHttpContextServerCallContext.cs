@@ -203,7 +203,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
             // It is still useful to set in case an interceptor accesses the status on the server.
             _status = new Status(StatusCode.Unknown, message, ex);
         }
-        HttpContext.Response.ConsolidateTrailers(this);
+        ConsolidateTrailers(HttpContext.Response);
     }
 
     // If there is a deadline then we need to have our own cancellation token.
@@ -232,18 +232,11 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
 
     internal Task EndCallAsync()
     {
-        EndCallCore();
+        ConsolidateTrailers(HttpContext.Response);
         return Task.CompletedTask;
     }
 
-    private void EndCallCore()
-    {
-        HttpContext.Response.ConsolidateTrailers(this);
-    }
-
-#pragma warning disable CS8764 // Nullability of return type doesn't match overridden member (possibly because of nullability attributes).
     protected override WriteOptions? WriteOptionsCore { get; set; }
-#pragma warning restore CS8764 // Nullability of return type doesn't match overridden member (possibly because of nullability attributes).
 
     protected override AuthContext AuthContextCore
     {
@@ -298,17 +291,14 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
         }
         return null;
     }
-}
 
-internal static class HttpResponseExtensions
-{
-    public static void ConsolidateTrailers(this HttpResponse httpResponse, ProxyHttpContextServerCallContext context)
+    private void ConsolidateTrailers(HttpResponse httpResponse)
     {
         var trailersDestination = GrpcProtocolHelpers.GetTrailersDestination(httpResponse);
 
-        if (context.HasResponseTrailers)
+        if (HasResponseTrailers)
         {
-            foreach (var trailer in context.ResponseTrailers)
+            foreach (var trailer in ResponseTrailers)
             {
                 var value = (trailer.IsBinary) ? Convert.ToBase64String(trailer.ValueBytes) : trailer.Value;
                 trailersDestination.Append(trailer.Key, value);
@@ -316,6 +306,6 @@ internal static class HttpResponseExtensions
         }
 
         // Append status trailers, these overwrite any existing status trailers set via ServerCallContext.ResponseTrailers
-        GrpcProtocolHelpers.SetStatus(trailersDestination, context.Status);
+        GrpcProtocolHelpers.SetStatus(trailersDestination, Status);
     }
 }
