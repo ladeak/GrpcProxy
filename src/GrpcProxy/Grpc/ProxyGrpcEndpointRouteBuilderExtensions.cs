@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using GrpcProxy.Grpc.CallHandlers;
+using Microsoft.Extensions.Options;
 
 namespace GrpcProxy.Grpc;
 

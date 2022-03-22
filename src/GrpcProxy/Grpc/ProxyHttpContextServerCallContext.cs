@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using Grpc.AspNetCore.Server;
 using Grpc.AspNetCore.Server.Internal;
@@ -18,6 +19,8 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     private Status _status;
     private AuthContext? _authContext;
     private Activity? _activity;
+    private Pipe? _requestPipe;
+    private Pipe? _reponsePipe;
     private DefaultDeserializationContext? _requestDeserializationContext;
     private DefaultDeserializationContext? _responseDeserializationContext;
     private HttpResponseMessage? _proxiedResponse;
@@ -51,7 +54,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         get
         {
-            if (_proxiedResponse.Headers.TryGetValues(GrpcProtocolConstants.MessageEncodingHeader, out var values))
+            if (_proxiedResponse?.Headers.TryGetValues(GrpcProtocolConstants.MessageEncodingHeader, out var values) ?? false)
             {
                 return values.First();
             }
@@ -63,9 +66,31 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         get => _requestDeserializationContext ??= new DefaultDeserializationContext();
     }
+
     internal DefaultDeserializationContext ResponseDeserializationContext
     {
         get => _responseDeserializationContext ??= new DefaultDeserializationContext();
+    }
+
+    internal Pipe RequestPipe
+    {
+        get => _requestPipe ??= new Pipe();
+    }
+
+    internal Pipe ResponsePipe
+    {
+        get => _reponsePipe ??= new Pipe();
+    }
+
+    internal HttpResponseMessage? ProxiedResponseMessage
+    {
+        get => _proxiedResponse;
+        set
+        {
+            if (_proxiedResponse != null)
+                throw new InvalidOperationException("Response can only be set once");
+            _proxiedResponse = value;
+        }
     }
 
     internal bool HasResponseTrailers => _responseTrailers != null;
@@ -279,12 +304,6 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
             _activity.AddTag(GrpcServerConstants.ActivityMethodTag, MethodCore);
 
         GrpcEventSource.Log.CallStart(MethodCore);
-    }
-
-    public void SetProxiedResponse(HttpResponseMessage proxiedResponse)
-    {
-        if (_proxiedResponse == null)
-            _proxiedResponse = proxiedResponse;
     }
 
     private Activity? GetHostActivity()

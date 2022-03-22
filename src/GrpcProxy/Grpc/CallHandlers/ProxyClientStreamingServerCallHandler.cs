@@ -1,10 +1,9 @@
-﻿using System.IO.Pipelines;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Shared.Server;
 using GrpcProxy.AspNetCore;
 using GrpcProxy.Forwarder;
 
-namespace GrpcProxy.Grpc
+namespace GrpcProxy.Grpc.CallHandlers
 {
     internal class ProxyClientStreamingServerCallHandler<TRequest, TResponse> : ProxyServerCallHandlerBase<TRequest, TResponse>
         where TRequest : class
@@ -35,21 +34,25 @@ namespace GrpcProxy.Grpc
             BodySizeFeatureHelper.DisableMinRequestBodyDataRateAndMaxRequestBodySize(httpContext);
 
             var proxyCallId = Guid.NewGuid();
-            var requestPipe = new Pipe();
-            var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, requestPipe.Writer, serverCallContext.CancellationToken);
-            while (!serverCallContext.CancellationToken.IsCancellationRequested)
+            var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, serverCallContext);
+            var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext, proxyCallId);
+
+            await _httpForwarder.ReturnResponseAsync(httpContext, sending.StreamCopyContent, HttpTransformer.Empty, serverCallContext);
+            var responseData = await serverCallContext.ResponsePipe.Reader.ReadSingleMessageAsync(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer, MessageDirection.Response);
+            await _messageMediator.AddResponseAsync(sending.ResponseMessage, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData?.ToString() ?? string.Empty);
+
+            await deserializingRequestTask;
+        }
+
+        private async ValueTask DeserializingRequestsAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId)
+        {
+            while (true)
             {
-                var message = await requestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Request, serverCallContext.CancellationToken);
+                var message = await serverCallContext.RequestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Request, CancellationToken.None);
                 if (message == null)
                     break;
                 await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, message?.ToString() ?? string.Empty);
             }
-
-            var responsePipe = new Pipe();
-            await _httpForwarder.ReturnResponseAsync(httpContext, sending.ResponseMessage, sending.StreamCopyContent, HttpTransformer.Empty, responsePipe.Writer, serverCallContext.CancellationToken);
-            serverCallContext.SetProxiedResponse(sending.ResponseMessage);
-            var responseData = await responsePipe.Reader.ReadSingleMessageAsync(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer, MessageDirection.Response);
-            await _messageMediator.AddResponseAsync(sending.ResponseMessage, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, responseData?.ToString() ?? string.Empty);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.IO.Pipelines;
 using System.Net;
 using GrpcProxy.AspNetCore;
+using GrpcProxy.Grpc;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
@@ -16,8 +17,7 @@ internal sealed class HttpForwarder
         string destinationPrefix,
         HttpClient httpClient,
         HttpTransformer transformer,
-        PipeWriter pipeWriter,
-        CancellationToken token)
+        ProxyHttpContextServerCallContext proxyContext)
     {
         _ = context ?? throw new ArgumentNullException(nameof(context));
         _ = destinationPrefix ?? throw new ArgumentNullException(nameof(destinationPrefix));
@@ -28,47 +28,51 @@ internal sealed class HttpForwarder
         var isStreamingRequest = true;
 
         // Step 1-3: Create outgoing HttpRequestMessage
-        var (destinationRequest, requestContent) = await CreateRequestMessageAsync(context, destinationPrefix, transformer, isStreamingRequest, pipeWriter, token);
+        var (destinationRequest, requestContent) = await CreateRequestMessageAsync(context, destinationPrefix, transformer, isStreamingRequest, proxyContext.RequestPipe.Writer, proxyContext.CancellationToken);
 
         // Step 4: Send the outgoing request using HttpClient
         HttpResponseMessage destinationResponse;
         try
         {
-            destinationResponse = await httpClient.SendAsync(destinationRequest, HttpCompletionOption.ResponseHeadersRead, token);
+            destinationResponse = await httpClient.SendAsync(destinationRequest, HttpCompletionOption.ResponseHeadersRead, proxyContext.CancellationToken);
         }
         catch (Exception)
         {
             throw;
             //await HandleRequestFailureAsync(context, requestContent, requestException, transformer, token);
         }
+        proxyContext.ProxiedResponseMessage = destinationResponse;
         return (destinationResponse, requestContent);
     }
 
     public async ValueTask<ForwarderError> ReturnResponseAsync(
         HttpContext context,
-        HttpResponseMessage destinationResponse,
         StreamCopyHttpContent? requestContent,
         HttpTransformer transformer,
-        PipeWriter pipeWriter,
-        CancellationToken token)
+        ProxyHttpContextServerCallContext proxyContext)
     {
         var isClientHttp2 = true;
         var isStreamingRequest = true;
 
+        if (proxyContext.ProxiedResponseMessage == null)
+            throw new ArgumentException("ProxyContext has no Http response message");
+
+        var pipeWriter = proxyContext.ResponsePipe.Writer;
+
         // Detect connection downgrade, which may be problematic for e.g. gRPC.
-        if (isClientHttp2 && destinationResponse.Version.Major != 2)
+        if (isClientHttp2 && proxyContext.ProxiedResponseMessage.Version.Major != 2)
             throw new InvalidOperationException("Downgrade");
 
         try
         {
             // Step 5: Copy response status line Client ◄-- Proxy ◄-- Destination
             // Step 6: Copy response headers Client ◄-- Proxy ◄-- Destination
-            var copyBody = await CopyResponseStatusAndHeadersAsync(destinationResponse, context, transformer);
+            var copyBody = await CopyResponseStatusAndHeadersAsync(proxyContext.ProxiedResponseMessage, context, transformer);
 
             if (!copyBody)
             {
                 // The transforms callback decided that the response body should be discarded.
-                destinationResponse.Dispose();
+                proxyContext.ProxiedResponseMessage.Dispose();
 
                 if (requestContent is not null && requestContent.InProgress)
                     await requestContent.ConsumptionTask;
@@ -78,7 +82,7 @@ internal sealed class HttpForwarder
         }
         catch (Exception)
         {
-            destinationResponse.Dispose();
+            proxyContext.ProxiedResponseMessage.Dispose();
             if (requestContent is not null && requestContent.InProgress)
                 await requestContent.ConsumptionTask;
 
@@ -90,7 +94,7 @@ internal sealed class HttpForwarder
         }
 
         // Step 7-A: Check for a 101 upgrade response, this takes care of WebSockets as well as any other upgradeable protocol.
-        if (destinationResponse.StatusCode == HttpStatusCode.SwitchingProtocols)
+        if (proxyContext.ProxiedResponseMessage.StatusCode == HttpStatusCode.SwitchingProtocols)
             throw new InvalidOperationException("Upgrade protocol is not supported.");
 
         // NOTE: it may *seem* wise to call `context.Response.StartAsync()` at this point
@@ -104,7 +108,7 @@ internal sealed class HttpForwarder
         // and clients misbehave if the initial headers response does not indicate stream end.
 
         // Step 7-B: Copy response body Client ◄-- Proxy ◄-- Destination
-        var (responseBodyCopyResult, responseBodyException) = await CopyResponseBodyAsync(destinationResponse.Content, context.Response.Body, pipeWriter, token);
+        var (responseBodyCopyResult, responseBodyException) = await CopyResponseBodyAsync(proxyContext.ProxiedResponseMessage.Content, context.Response.Body, pipeWriter, proxyContext.CancellationToken);
 
         if (responseBodyCopyResult != StreamCopyResult.Success)
         {
@@ -112,7 +116,7 @@ internal sealed class HttpForwarder
         }
 
         // Step 8: Copy response trailer headers and finish response Client ◄-- Proxy ◄-- Destination
-        await CopyResponseTrailingHeadersAsync(destinationResponse, context, transformer);
+        await CopyResponseTrailingHeadersAsync(proxyContext.ProxiedResponseMessage, context, transformer);
 
         if (isStreamingRequest)
         {

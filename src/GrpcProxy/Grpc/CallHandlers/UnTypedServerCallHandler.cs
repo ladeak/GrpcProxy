@@ -3,7 +3,7 @@ using Grpc.Core;
 using Grpc.Shared.Server;
 using GrpcProxy.Compilation;
 
-namespace GrpcProxy.Grpc;
+namespace GrpcProxy.Grpc.CallHandlers;
 
 internal class UnTypedServerCallHandler : ProxyDuplexStreamingServerCallHandler<string, string>
 {
