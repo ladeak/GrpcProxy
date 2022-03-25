@@ -12,6 +12,9 @@ builder.Services.AddGrpc().AddProxy();
 builder.Services.Configure<GrpcProxyOptions>(builder.Configuration.GetSection("GrpcProxy"));
 builder.Services.Configure<GrpcProxyMapping>(builder.Configuration.GetSection("p"));
 
+if (!string.IsNullOrWhiteSpace(builder.Configuration.GetValue<string>("p:SeqAddress")))
+    builder.Logging.AddSeq(builder.Configuration.GetValue<string>("p:SeqAddress"), builder.Configuration.GetValue<string>("p:SeqKey"));
+
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {

@@ -24,6 +24,8 @@ grpcproxy --GrpcProxy:FallbackAddress https://localhost:5001
 
 - `--p:ProtoPath` [optional] defines a default proto file to use
 - `--p:Address` [optional] defines where the proxy service shall forward the requests
+- `--p:SeqAddress` [optional] if logs shall be pushes to SEQ
+- `--p:SeqKey` [optional] SEQ API key
 
 A web UI is available at https://localhost:7012.
 
