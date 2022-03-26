@@ -1,4 +1,6 @@
-﻿using Grpc.AspNetCore.Server;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using Grpc.AspNetCore.Server;
 using Grpc.Core;
 using Grpc.Shared.Server;
 using GrpcProxy.Grpc.CallHandlers;
@@ -35,35 +37,64 @@ internal partial class ProxyServerCallHandlerFactory
 
     public UnTypedServerCallHandler CreateUnTyped(string serviceAddress)
     {
-        return new UnTypedServerCallHandler(_loggerFactory, _httpClientFactory, _mediator, serviceAddress);
+        return new UnTypedServerCallHandler(_httpClientFactory, _mediator, serviceAddress);
     }
 
-    public ProxyUnaryServerCallHandler<TRequest, TResponse> CreateUnary<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
+    public ProxyServerCallHandlerBase<TRequest, TResponse> CreateUnary<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyUnaryServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _loggerFactory, _httpClientFactory, _mediator, options.Address);
+        if (TryGetMockResponse(method.Name, options.MockResponses, out TResponse? mockResponse))
+            return new ProxyMockServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _mediator, mockResponse);
+        return new ProxyUnaryServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, options.Address);
     }
 
-    public ProxyClientStreamingServerCallHandler<TRequest, TResponse> CreateClientStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
+    public ProxyServerCallHandlerBase<TRequest, TResponse> CreateClientStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyClientStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
+        if (TryGetMockResponse(method.Name, options.MockResponses, out TResponse? mockResponse))
+            return new ProxyMockServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _mediator, mockResponse);
+        return new ProxyClientStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, options.Address);
     }
 
-    public ProxyDuplexStreamingServerCallHandler<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
+    public ProxyServerCallHandlerBase<TRequest, TResponse> CreateDuplexStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-       return new ProxyDuplexStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
+        if (TryGetMockResponse(method.Name, options.MockResponses, out TResponse? mockResponse))
+            return new ProxyMockServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _mediator, mockResponse);
+        return new ProxyDuplexStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, options.Address);
     }
 
-    public ProxyServerStreamingServerCallHandler<TRequest, TResponse> CreateServerStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
+    public ProxyServerCallHandlerBase<TRequest, TResponse> CreateServerStreaming<TRequest, TResponse>(Method<TRequest, TResponse> method, ProxyBehaviorOptions options)
         where TRequest : class
         where TResponse : class
     {
-        return new ProxyServerStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, _loggerFactory, options.Address);
+        if (TryGetMockResponse(method.Name, options.MockResponses, out TResponse? mockResponse))
+            return new ProxyMockServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _mediator, mockResponse);
+        return new ProxyServerStreamingServerCallHandler<TRequest, TResponse>(CreateMethodOptions(options), method, _httpClientFactory, _mediator, options.Address);
+    }
+
+    private bool TryGetMockResponse<TResponse>(string serviceName, IEnumerable<MockResponse> mockResponses, [NotNullWhen(true)] out TResponse? result)
+        where TResponse : class
+    {
+        result = default;
+        foreach (var mockResponse in mockResponses)
+            if (TryGetMockResponse(serviceName, mockResponse, out result))
+                return true;
+        return false;
+    }
+
+    private bool TryGetMockResponse<TResponse>(string serviceName, MockResponse mockResponse, [NotNullWhen(true)] out TResponse? result)
+        where TResponse : class
+    {
+        result = default;
+        if (string.IsNullOrWhiteSpace(mockResponse.MethodName))
+            return false;
+        if (serviceName == mockResponse.MethodName)
+            result = JsonSerializer.Deserialize<TResponse>(mockResponse.Response);
+        return result != null;
     }
 }
 

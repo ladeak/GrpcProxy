@@ -13,11 +13,9 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
     private const string LoggerName = nameof(ProxyServerCallHandlerBase<TRequest, TResponse>);
     protected readonly MethodOptions _options;
     protected readonly Method<TRequest, TResponse> _method;
-    protected ILogger _logger { get; }
 
-    protected ProxyServerCallHandlerBase(MethodOptions options, Method<TRequest, TResponse> method, ILoggerFactory loggerFactory)
+    protected ProxyServerCallHandlerBase(MethodOptions options, Method<TRequest, TResponse> method)
     {
-        _logger = loggerFactory.CreateLogger(LoggerName);
         _options = options;
         _method = method;
     }
@@ -30,7 +28,7 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         if (!HttpProtocol.IsHttp2(httpContext.Request.Protocol) && !HttpProtocol.IsHttp3(httpContext.Request.Protocol))
             return ProcessNonHttp2Request(httpContext);
 
-        var serverCallContext = new ProxyHttpContextServerCallContext(httpContext, _options, typeof(TRequest), typeof(TResponse), _logger);
+        var serverCallContext = new ProxyHttpContextServerCallContext(httpContext, _options, typeof(TRequest), typeof(TResponse));
         httpContext.Features.Set<IServerCallContextFeature>(serverCallContext);
 
         GrpcProtocolHelpers.AddProtocolHeaders(httpContext.Response);

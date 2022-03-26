@@ -8,7 +8,6 @@ namespace GrpcProxy.Grpc.CallHandlers;
 internal class UnTypedServerCallHandler : ProxyDuplexStreamingServerCallHandler<string, string>
 {
     public UnTypedServerCallHandler(
-        ILoggerFactory loggerFactory,
         IHttpClientFactory httpClientFactory,
         IProxyMessageMediator messageMediator,
         string serviceAddress)
@@ -16,7 +15,6 @@ internal class UnTypedServerCallHandler : ProxyDuplexStreamingServerCallHandler<
             new Method<string, string>(MethodType.DuplexStreaming, "untyped", "untyped", Marshallers.Create((_, __) => { }, Deserialize), Marshallers.Create((_, __) => { }, Deserialize)),
             httpClientFactory,
             messageMediator,
-            loggerFactory,
             serviceAddress)
     {
     }

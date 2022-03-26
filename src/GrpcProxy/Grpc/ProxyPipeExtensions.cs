@@ -86,8 +86,6 @@ internal static partial class ProxyPipeExtensions
     public static async ValueTask<T> ReadSingleMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction)
     where T : class
     {
-        var logger = serverCallContext.Logger;
-
         try
         {
             T? request = null;
@@ -164,7 +162,6 @@ internal static partial class ProxyPipeExtensions
     public static async ValueTask<T?> ReadStreamMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction, CancellationToken cancellationToken = default)
         where T : class
     {
-        var logger = serverCallContext.Logger;
         try
         {
             while (true)

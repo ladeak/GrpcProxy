@@ -19,4 +19,13 @@ public class ProxyBehaviorOptions
     public int? MaxMessageSize { get; set; }
 
     public string Address { get; set; } = "";
+
+    public List<MockResponse> MockResponses { get; set; } = new List<MockResponse>();
+}
+
+public class MockResponse
+{
+    public string MethodName { get; set; } = string.Empty;
+
+    public string Response { get; set; } = string.Empty;
 }

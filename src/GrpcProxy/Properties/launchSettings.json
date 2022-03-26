@@ -3,8 +3,7 @@
   "profiles": {
     "WebProxy": {
       "commandName": "Project",
-      "commandLineArgs": "--p:ProtoPath .\\bin\\Debug\\net6.0\\SuperService.proto --p:Address https://localhost:5001",
-      //"commandLineArgs": "--GrpcProxy:FallbackAddress https://localhost:5001",
+      "commandLineArgs": "--p:ProtoPath .\\bin\\Debug\\net6.0\\SuperService.proto --p:Address https://localhost:5001 --p:MockResponses:0:MethodName DoWork --p:MockResponses:0:Response \"{\\\"Message\\\":\\\"This is a mocked response\\\"}\"",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

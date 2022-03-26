@@ -16,11 +16,10 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
     public ProxyUnaryServerCallHandler(
         MethodOptions options,
         Method<TRequest, TResponse> method,
-        ILoggerFactory loggerFactory,
         IHttpClientFactory httpClientFactory,
         IProxyMessageMediator messageMediator,
         string serviceAddress)
-        : base(options, method, loggerFactory)
+        : base(options, method)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _messageMediator = messageMediator ?? throw new ArgumentNullException(nameof(messageMediator));

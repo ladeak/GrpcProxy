@@ -26,16 +26,14 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     private DefaultDeserializationContext? _responseDeserializationContext;
     private HttpResponseMessage? _proxiedResponse;
 
-    internal ProxyHttpContextServerCallContext(HttpContext httpContext, MethodOptions options, Type requestType, Type responseType, ILogger logger)
+    internal ProxyHttpContextServerCallContext(HttpContext httpContext, MethodOptions options, Type requestType, Type responseType)
     {
         HttpContext = httpContext;
         Options = options;
         RequestType = requestType;
         ResponseType = responseType;
-        Logger = logger;
     }
 
-    internal ILogger Logger { get; }
     internal HttpContext HttpContext { get; }
     internal MethodOptions Options { get; }
     internal Type RequestType { get; }
