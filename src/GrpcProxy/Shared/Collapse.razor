@@ -1,0 +1,20 @@
+﻿<p>
+	<Button class="btn btn-light" type="button" @onclick="ToggleDetails">Toggle mocks</Button>
+</p>
+<div class="@Toggle">
+	@ChildContent 
+</div>
+
+
+@code
+{
+	[Parameter]
+	public bool Collapsed { get; set; }
+
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	private string? Toggle => Collapsed ? "collapse" : ".collapse.show";
+
+	private void ToggleDetails() => Collapsed = !Collapsed;
+}

@@ -7,7 +7,7 @@ This tool is under development.
 Install the tool with dotnet CLI:
 
 ```
-dotnet tool install LaDeak.GrpcProxy --global --version 0.0.2-alpha1
+dotnet tool install LaDeak.GrpcProxy --global --version 0.0.2-alpha2
 ```
 
 ### Run the tool

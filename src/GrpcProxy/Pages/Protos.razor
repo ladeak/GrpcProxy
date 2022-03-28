@@ -31,7 +31,9 @@
 				<label class="form-label">Max Message Size (bytes):</label>
 				<InputNumber @bind-Value="Model.MaxMessageSize" />
 			</div>
-			<InputMock Mocks=Model.Mocks />
+			<Collapse Collapsed=MocksCollapsed>
+				<InputMock Mocks=Model.Mocks />
+			</Collapse>
 			<button type="submit" class="btn btn-success" disabled="@(!context.Validate())">Add Proto</button>
 		</EditForm>
 	</div>
@@ -79,6 +81,8 @@
 
 	public ProtoModel Model { get; set; } = new ProtoModel();
 
+	public bool MocksCollapsed { get; set; } = true;
+
 	public string Error { get; set; } = string.Empty;
 
 	private async Task HandleValidSubmit()
@@ -100,14 +104,15 @@
 					EnableDetailedErrors = Model.EnableDetailedErrors,
 					MaxMessageSize = Model.MaxMessageSize,
 					MockResponses = Model.Mocks
-							.Where(x => !string.IsNullOrWhiteSpace(x.MethodName) && !string.IsNullOrWhiteSpace(x.Response))
-							.Select(x => new MockResponse() { MethodName = x.MethodName!, Response = x.Response! })
-							.ToList()
+									.Where(x => !string.IsNullOrWhiteSpace(x.MethodName) && !string.IsNullOrWhiteSpace(x.Response))
+									.Select(x => new MockResponse() { MethodName = x.MethodName!, Response = x.Response! })
+									.ToList()
 				};
 			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, mapping);
 			Model.EnableDetailedErrors = false;
 			Model.MaxMessageSize = null;
 			Model.Mocks.Clear();
+			MocksCollapsed = true;
 		}
 		catch (Exception ex)
 		{
