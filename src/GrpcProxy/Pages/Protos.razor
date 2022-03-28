@@ -31,6 +31,7 @@
 				<label class="form-label">Max Message Size (bytes):</label>
 				<InputNumber @bind-Value="Model.MaxMessageSize" />
 			</div>
+			<InputMock Mocks=Model.Mocks />
 			<button type="submit" class="btn btn-success" disabled="@(!context.Validate())">Add Proto</button>
 		</EditForm>
 	</div>
@@ -72,6 +73,8 @@
 		public bool EnableDetailedErrors { get; set; }
 
 		public int? MaxMessageSize { get; set; }
+
+		public List<MockData> Mocks { get; set; } = new List<MockData>();
 	}
 
 	public ProtoModel Model { get; set; } = new ProtoModel();
@@ -90,7 +93,21 @@
 			await Model.File.OpenReadStream().CopyToAsync(fs);
 			await fs.FlushAsync();
 			fs.Close();
-			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, new GrpcProxyMapping() { Address = Model.ServiceAddress!, ProtoPath = tempFile, EnableDetailedErrors = Model.EnableDetailedErrors, MaxMessageSize = Model.MaxMessageSize });
+			var mapping = new GrpcProxyMapping()
+				{
+					Address = Model.ServiceAddress!,
+					ProtoPath = tempFile,
+					EnableDetailedErrors = Model.EnableDetailedErrors,
+					MaxMessageSize = Model.MaxMessageSize,
+					MockResponses = Model.Mocks
+							.Where(x => !string.IsNullOrWhiteSpace(x.MethodName) && !string.IsNullOrWhiteSpace(x.Response))
+							.Select(x => new MockResponse() { MethodName = x.MethodName!, Response = x.Response! })
+							.ToList()
+				};
+			await ProtoLoader.LoadProtoFileAsync(_serviceRepo, mapping);
+			Model.EnableDetailedErrors = false;
+			Model.MaxMessageSize = null;
+			Model.Mocks.Clear();
 		}
 		catch (Exception ex)
 		{

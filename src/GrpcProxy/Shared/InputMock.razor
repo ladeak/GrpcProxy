@@ -1,0 +1,72 @@
+﻿<p>
+	<Button class="btn btn-light" type="button" @onclick="ToggleDetails" >Toggle mocks</Button>
+</p>
+<div class="@Toggle" id="collapseExample">
+	<div class="card" style="margin: 10px;">
+		<div class="card-body">
+			<h5 class="card-title"></h5>
+			@if (Mocks.Any())
+			{
+				<div class="row">
+					<div class="col-2">
+						Method:
+					</div>
+					<div class="col">
+						Mocked Response:
+					</div>
+				</div>
+			}
+			@foreach (var data in Mocks)
+			{
+				<div class="row align-items-start">
+					<div class="col-2">
+						<InputText style="width: 100%" class="width:auto" @bind-Value="data.MethodName" />
+					</div>
+					<div class="col">
+						<InputTextArea rows=1 style="width: 100%" @bind-Value="data.Response" />
+					</div>
+					<Button class="col-auto btn btn-danger btn-sm" type="button" @onclick="()=>Mocks.Remove(data)">X</Button>
+				</div>
+			}
+			@if (Mocks.Any())
+			{
+				<hr />
+			}
+			<div class="mb-3">
+				<label class="form-label">Method:</label>
+				<InputText @bind-Value="MethodName" />
+			</div>
+			<div class="mb-3">
+				<label class="form-label">Response:</label>
+				<InputTextArea rows=2 style="width: 100%" @bind-Value="Response" />
+			</div>
+			<Button class="col btn btn-primary btn-sm" type="button" @onclick="Add">Add</Button>
+		</div>
+	</div>
+</div>
+
+
+@code
+{
+	[Parameter]
+	public List<MockData> Mocks { get; set; }
+
+	public string? MethodName { get; set; }
+
+	public string? Response { get; set; }
+
+	public void Add()
+	{
+		if (string.IsNullOrWhiteSpace(MethodName) || string.IsNullOrWhiteSpace(Response))
+			return;
+		Mocks.Add(new MockData() { MethodName = MethodName, Response = Response });
+		MethodName = null;
+		Response = null;
+	}
+
+	private bool collapsed = true;
+
+	private string? Toggle => collapsed ? "collapse" : ".collapse.show";
+
+	private void ToggleDetails() => collapsed = !collapsed;
+}
