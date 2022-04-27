@@ -47,8 +47,8 @@ namespace Grpc.Dotnet.Cli.Commands
 
         private readonly HttpClient _httpClient;
 
-        public CommandBase(IConsole console, FileInfo? projectPath)
-            : this(console, ResolveProject(projectPath), new HttpClient()) { }
+        public CommandBase(IConsole console, string? projectPath, HttpClient client)
+            : this(console, ResolveProject(projectPath), client) { }
 
         // Internal for testing
         internal CommandBase(IConsole console, Project project)
@@ -165,7 +165,7 @@ namespace Grpc.Dotnet.Cli.Commands
             }
         }
 
-        public void AddProtobufReference(Services services, string additionalImportDirs, Access access, string file, string url)
+        public void AddProtobufReference(Services services, string? additionalImportDirs, Access access, string file, string url)
         {
             var resolvedPath = Path.IsPathRooted(file) ? file : Path.Join(Project.DirectoryPath, file);
             if (!File.Exists(resolvedPath))
@@ -174,7 +174,13 @@ namespace Grpc.Dotnet.Cli.Commands
             }
 
             var normalizedFile = NormalizePath(file);
-            var normalizedAdditionalImportDirs = string.Join(';', additionalImportDirs.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(NormalizePath));
+            
+            var normalizedAdditionalImportDirs = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(additionalImportDirs))
+            {
+                normalizedAdditionalImportDirs = string.Join(';', additionalImportDirs.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(NormalizePath));
+            }
 
             if (!Project.GetItems(ProtobufElement).Any(i => string.Equals(NormalizePath(i.UnevaluatedInclude), normalizedFile, StringComparison.OrdinalIgnoreCase)))
             {
@@ -213,20 +219,29 @@ namespace Grpc.Dotnet.Cli.Commands
             }
         }
 
-        public static Project ResolveProject(FileInfo? project)
+        public static Project ResolveProject(string? project)
         {
             if (project != null)
             {
-                if (!File.Exists(project.FullName))
+                if (File.Exists(project))
                 {
-                    throw new CLIToolException(string.Format(CultureInfo.CurrentCulture, CoreStrings.ErrorProjectDoesNotExist, project.FullName));
+                    return new Project(project);
+                }
+                if (Directory.Exists(project))
+                {
+                    return LoadFromDirectoryPath(project);
                 }
 
-                return new Project(project.FullName);
+                throw new CLIToolException(string.Format(CultureInfo.CurrentCulture, CoreStrings.ErrorProjectDoesNotExist, project));
             }
 
             var currentDirectory = Directory.GetCurrentDirectory();
-            var projectFiles = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.csproj");
+            return LoadFromDirectoryPath(currentDirectory);
+        }
+
+        private static Project LoadFromDirectoryPath(string currentDirectory)
+        {
+            var projectFiles = Directory.GetFiles(currentDirectory, "*.csproj");
 
             if (projectFiles.Length == 0)
             {

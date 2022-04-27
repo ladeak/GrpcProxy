@@ -23,6 +23,7 @@ using Grpc.Core;
 using Grpc.Net.Client.Internal.Http;
 using Grpc.Shared;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 #if SUPPORT_LOAD_BALANCING
 using Grpc.Net.Client.Balancer.Internal;
 #endif
@@ -91,10 +92,7 @@ namespace Grpc.Net.Client.Internal
 
         public Task<Status> CallTask => _callTcs.Task;
 
-        public CancellationToken CancellationToken
-        {
-            get { return _callCts.Token; }
-        }
+        public override CancellationToken CancellationToken => _callCts.Token;
 
         public override Type RequestType => typeof(TRequest);
         public override Type ResponseType => typeof(TResponse);
@@ -182,6 +180,10 @@ namespace Grpc.Net.Client.Internal
                 Disposed = true;
 
                 Cleanup(GrpcProtocolConstants.DisposeCanceledStatus);
+
+                // If the call was disposed then observe any potential response exception.
+                // Observe the task's exception to prevent TaskScheduler.UnobservedTaskException from firing.
+                _responseTcs?.Task.ObserveException();
             }
         }
 
@@ -316,9 +318,21 @@ namespace Grpc.Net.Client.Internal
 
                 return metadata;
             }
-            catch (Exception ex) when (ResolveException(ErrorStartingCallMessage, ex, out _, out var resolvedException))
+            catch (Exception ex)
             {
-                throw resolvedException;
+                // If there was an error fetching response headers then it's likely the same error is reported
+                // by response TCS. The user is unlikely to observe both errors.
+                // Observe the task's exception to prevent TaskScheduler.UnobservedTaskException from firing.
+                _responseTcs?.Task.ObserveException();
+
+                if (ResolveException(ErrorStartingCallMessage, ex, out _, out var resolvedException))
+                {
+                    throw resolvedException;
+                }
+                else
+                {
+                    throw;
+                }
             }
         }
 
@@ -362,7 +376,26 @@ namespace Grpc.Net.Client.Internal
             message.Content = content;
         }
 
-        public void CancelCallFromCancellationToken()
+        public bool TryRegisterCancellation(
+            CancellationToken cancellationToken,
+            [NotNullWhen(true)] out CancellationTokenRegistration? cancellationTokenRegistration)
+        {
+            // Only register if the token:
+            // 1. Can be canceled.
+            // 2. The token isn't the same one used in CallOptions. Already listening for its cancellation.
+            if (cancellationToken.CanBeCanceled && cancellationToken != Options.CancellationToken)
+            {
+                cancellationTokenRegistration = cancellationToken.Register(
+                    static (state) => ((GrpcCall<TRequest, TResponse>)state!).CancelCallFromCancellationToken(),
+                    this);
+                return true;
+            }
+
+            cancellationTokenRegistration = null;
+            return false;
+        }
+
+        private void CancelCallFromCancellationToken()
         {
             using (StartScope())
             {
@@ -584,13 +617,23 @@ namespace Grpc.Net.Client.Internal
                     // Update HTTP response TCS before clean up. Needs to happen first because cleanup will
                     // cancel the TCS for anyone still listening.
                     _httpResponseTcs.TrySetException(resolvedException);
+                    _httpResponseTcs.Task.ObserveException();
 
                     Cleanup(status.Value);
 
                     // Update response TCS after overall call status is resolved. This is required so that
                     // the call is completed before an error is thrown from ResponseAsync. If it happens
                     // afterwards then there is a chance GetStatus() will error because the call isn't complete.
-                    _responseTcs?.TrySetException(resolvedException);
+                    if (_responseTcs != null)
+                    {
+                        _responseTcs.TrySetException(resolvedException);
+                        
+                        // Always observe cancellation-like exceptions.
+                        if (IsCancellationOrDeadlineException(ex))
+                        {
+                            _responseTcs.Task.ObserveException();
+                        }
+                    }
                 }
 
                 // Verify that FinishCall is called in every code path of this method.
@@ -699,7 +742,8 @@ namespace Grpc.Net.Client.Internal
 
         public Exception CreateFailureStatusException(Status status)
         {
-            if (Channel.ThrowOperationCanceledOnCancellation && status.StatusCode == StatusCode.DeadlineExceeded)
+            if (Channel.ThrowOperationCanceledOnCancellation &&
+                (status.StatusCode == StatusCode.DeadlineExceeded || status.StatusCode == StatusCode.Cancelled))
             {
                 // Convert status response of DeadlineExceeded to OperationCanceledException when
                 // ThrowOperationCanceledOnCancellation is true.
@@ -726,7 +770,10 @@ namespace Grpc.Net.Client.Internal
                 if (timeout.Value <= TimeSpan.Zero)
                 {
                     // Call was started with a deadline in the past so immediately trigger deadline exceeded.
-                    DeadlineExceeded();
+                    lock (this)
+                    {
+                        DeadlineExceeded();
+                    }
                 }
                 else
                 {
@@ -762,7 +809,9 @@ namespace Grpc.Net.Client.Internal
                 // The cancellation token will cancel the call CTS.
                 // This must be registered after the client writer has been created
                 // so that cancellation will always complete the writer.
-                _ctsRegistration = Options.CancellationToken.Register(CancelCallFromCancellationToken);
+                _ctsRegistration = Options.CancellationToken.Register(
+                    static (state) => ((GrpcCall<TRequest, TResponse>)state!).CancelCallFromCancellationToken(),
+                    this);
             }
 
             return (diagnosticSourceEnabled, activity);
@@ -989,8 +1038,14 @@ namespace Grpc.Net.Client.Internal
 
         private void DeadlineExceeded()
         {
+            Debug.Assert(Monitor.IsEntered(this));
+
             GrpcCallLog.DeadlineExceeded(Logger);
             GrpcEventSource.Log.CallDeadlineExceeded();
+
+            // Set _deadline to DateTime.MaxValue to signal that deadline has been exceeded.
+            // This prevents duplicate logging and cancellation.
+            _deadline = DateTime.MaxValue;
 
             CancelCall(new Status(StatusCode.DeadlineExceeded, string.Empty));
         }

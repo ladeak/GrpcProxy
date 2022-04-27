@@ -22,6 +22,7 @@ namespace Grpc.Net.Client.Internal
     internal interface IRandomGenerator
     {
         int Next(int minValue, int maxValue);
+        double NextDouble();
     }
 
     internal sealed class RandomGenerator : IRandomGenerator
@@ -35,9 +36,8 @@ namespace Grpc.Net.Client.Internal
             _random = new Random();
         }
 
-        public int Next(int minValue, int maxValue)
-        {
-            return _random.Next(minValue, maxValue);
-        }
+        public int Next(int minValue, int maxValue) => _random.Next(minValue, maxValue);
+
+        public double NextDouble() => _random.NextDouble();
     }
 }

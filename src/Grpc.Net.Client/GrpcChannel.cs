@@ -40,6 +40,10 @@ namespace Grpc.Net.Client
     public sealed class GrpcChannel : ChannelBase, IDisposable
     {
         internal const int DefaultMaxReceiveMessageSize = 1024 * 1024 * 4; // 4 MB
+#if SUPPORT_LOAD_BALANCING
+        internal const long DefaultInitialReconnectBackoffTicks = TimeSpan.TicksPerSecond * 1;
+        internal const long DefaultMaxReconnectBackoffTicks = TimeSpan.TicksPerSecond * 120;
+#endif
         internal const int DefaultMaxRetryAttempts = 5;
         internal const long DefaultMaxRetryBufferSize = 1024 * 1024 * 16; // 16 MB
         internal const long DefaultMaxRetryBufferPerCallSize = 1024 * 1024; // 1 MB
@@ -56,6 +60,8 @@ namespace Grpc.Net.Client
         internal Uri Address { get; }
         internal HttpMessageInvoker HttpInvoker { get; }
         internal HttpHandlerType HttpHandlerType { get; }
+        internal TimeSpan InitialReconnectBackoff { get; }
+        internal TimeSpan? MaxReconnectBackoff { get; }
         internal int? SendMaxMessageSize { get; }
         internal int? ReceiveMaxMessageSize { get; }
         internal int? MaxRetryAttempts { get; }
@@ -91,11 +97,6 @@ namespace Grpc.Net.Client
 
         private readonly bool _shouldDisposeHttpClient;
 
-        private T ResolveService<T>(IServiceProvider? serviceProvider, T defaultValue)
-        {
-            return (T?)serviceProvider?.GetService(typeof(T)) ?? defaultValue;
-        }
-
         internal GrpcChannel(Uri address, GrpcChannelOptions channelOptions) : base(address.Authority)
         {
             _lock = new object();
@@ -108,15 +109,18 @@ namespace Grpc.Net.Client
                 || channelOptions.DisposeHttpClient;
 
             Address = address;
-            LoggerFactory = channelOptions.LoggerFactory ?? ResolveService<ILoggerFactory>(channelOptions.ServiceProvider, NullLoggerFactory.Instance);
-            RandomGenerator = ResolveService<IRandomGenerator>(channelOptions.ServiceProvider, new RandomGenerator());
+            LoggerFactory = channelOptions.LoggerFactory ?? channelOptions.ResolveService<ILoggerFactory>(NullLoggerFactory.Instance);
+            RandomGenerator = channelOptions.ResolveService<IRandomGenerator>(new RandomGenerator());
             HttpHandlerType = CalculateHandlerType(channelOptions);
 
 #if SUPPORT_LOAD_BALANCING
+            InitialReconnectBackoff = channelOptions.InitialReconnectBackoff;
+            MaxReconnectBackoff = channelOptions.MaxReconnectBackoff;
+
             var resolverFactory = GetResolverFactory(channelOptions);
             ResolveCredentials(channelOptions, out _isSecure, out _callCredentials);
 
-            SubchannelTransportFactory = ResolveService<ISubchannelTransportFactory>(channelOptions.ServiceProvider, new SubChannelTransportFactory(this));
+            SubchannelTransportFactory = channelOptions.ResolveService<ISubchannelTransportFactory>(new SubChannelTransportFactory(this));
 
             if (!IsHttpOrHttpsAddress() || channelOptions.ServiceConfig?.LoadBalancingConfigs.Count > 0)
             {
@@ -124,14 +128,15 @@ namespace Grpc.Net.Client
             }
 
             var defaultPort = IsSecure ? 443 : 80;
-            var resolver = resolverFactory.Create(new ResolverOptions(Address, defaultPort, channelOptions.DisableResolverServiceConfig, LoggerFactory));
+            var resolver = resolverFactory.Create(new ResolverOptions(Address, defaultPort, LoggerFactory, channelOptions));
 
             ConnectionManager = new ConnectionManager(
                 resolver,
                 channelOptions.DisableResolverServiceConfig,
                 LoggerFactory,
+                channelOptions.ResolveService<IBackoffPolicyFactory>(new ExponentialBackoffPolicyFactory(RandomGenerator, InitialReconnectBackoff, MaxReconnectBackoff)),
                 SubchannelTransportFactory,
-                ResolveLoadBalancerFactories(channelOptions.ServiceProvider));
+                ResolveLoadBalancerFactories(channelOptions));
             ConnectionManager.ConfigureBalancer(c => new ChildHandlerLoadBalancer(
                 c,
                 channelOptions.ServiceConfig,
@@ -177,8 +182,7 @@ namespace Grpc.Net.Client
             if (channelOptions.Credentials != null)
             {
                 var configurator = new DefaultChannelCredentialsConfigurator();
-                // TODO(JamesNK): Remove nullable override after Grpc.Core.Api update
-                channelOptions.Credentials.InternalPopulateConfiguration(configurator, null!);
+                channelOptions.Credentials.InternalPopulateConfiguration(configurator, channelOptions.Credentials);
 
                 isSecure = configurator.IsSecure ?? false;
                 callCredentials = configurator.CallCredentials;
@@ -237,7 +241,7 @@ namespace Grpc.Net.Client
                 return new StaticResolverFactory(uri => new[] { new BalancerAddress(Address.Host, Address.Port) });
             }
 
-            var factories = ResolveService<IEnumerable<ResolverFactory>>(options.ServiceProvider, Array.Empty<ResolverFactory>());
+            var factories = options.ResolveService<IEnumerable<ResolverFactory>>(Array.Empty<ResolverFactory>());
             factories = factories.Union(ResolverFactory.KnownLoadResolverFactories);
 
             foreach (var factory in factories)
@@ -274,9 +278,9 @@ namespace Grpc.Net.Client
                 $"The HTTP transport must be configured on the channel using {nameof(GrpcChannelOptions)}.{nameof(GrpcChannelOptions.HttpHandler)}.");
         }
 
-        private LoadBalancerFactory[] ResolveLoadBalancerFactories(IServiceProvider? serviceProvider)
+        private LoadBalancerFactory[] ResolveLoadBalancerFactories(GrpcChannelOptions channelOptions)
         {
-            var serviceFactories = ResolveService<IEnumerable<LoadBalancerFactory>?>(serviceProvider, defaultValue: null);
+            var serviceFactories = channelOptions.ResolveService<IEnumerable<LoadBalancerFactory>?>(defaultValue: null);
             if (serviceFactories != null)
             {
                 return serviceFactories.Union(LoadBalancerFactory.KnownLoadBalancerFactories).ToArray();

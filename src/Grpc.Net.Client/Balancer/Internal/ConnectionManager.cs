@@ -36,7 +36,6 @@ namespace Grpc.Net.Client.Balancer.Internal
     {
         private static readonly ServiceConfig DefaultServiceConfig = new ServiceConfig();
 
-        private readonly SemaphoreSlim _nextPickerLock;
         private readonly object _lock;
         internal readonly Resolver _resolver;
         private readonly ISubchannelTransportFactory _subchannelTransportFactory;
@@ -47,6 +46,8 @@ namespace Grpc.Net.Client.Balancer.Internal
         // Internal for testing
         internal LoadBalancer? _balancer;
         internal SubchannelPicker? _picker;
+        // Cache picker wrapped in task once and reuse.
+        private Task<SubchannelPicker>? _pickerTask;
         private bool _resolverStarted;
         private TaskCompletionSource<SubchannelPicker> _nextPickerTcs;
         private int _currentSubchannelId;
@@ -56,17 +57,17 @@ namespace Grpc.Net.Client.Balancer.Internal
             Resolver resolver,
             bool disableResolverServiceConfig,
             ILoggerFactory loggerFactory,
+            IBackoffPolicyFactory backoffPolicyFactory,
             ISubchannelTransportFactory subchannelTransportFactory,
             LoadBalancerFactory[] loadBalancerFactories)
         {
             _lock = new object();
-            _nextPickerLock = new SemaphoreSlim(1);
             _nextPickerTcs = new TaskCompletionSource<SubchannelPicker>(TaskCreationOptions.RunContinuationsAsynchronously);
             _resolverStartedTcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             Logger = loggerFactory.CreateLogger<ConnectionManager>();
             LoggerFactory = loggerFactory;
-
+            BackoffPolicyFactory = backoffPolicyFactory;
             _subchannels = new List<Subchannel>();
             _stateWatchers = new List<StateWatcher>();
             _resolver = resolver;
@@ -78,6 +79,7 @@ namespace Grpc.Net.Client.Balancer.Internal
         public ConnectivityState State { get; private set; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
+        public IBackoffPolicyFactory BackoffPolicyFactory { get; }
         public bool DisableResolverServiceConfig { get; }
         public LoadBalancerFactory[] LoadBalancerFactories { get; }
 
@@ -198,7 +200,6 @@ namespace Grpc.Net.Client.Balancer.Internal
         public void Dispose()
         {
             _resolver.Dispose();
-            _nextPickerLock.Dispose();
             lock (_lock)
             {
                 _balancer?.Dispose();
@@ -284,10 +285,13 @@ namespace Grpc.Net.Client.Balancer.Internal
                     {
                         var stateWatcher = _stateWatchers[i];
 
+                        // Trigger watcher if either:
+                        // 1. Watcher is waiting for any state change.
+                        // 2. The state change matches the watcher's.
                         if (stateWatcher.WaitForState == null || stateWatcher.WaitForState == State)
                         {
-                            stateWatcher.Tcs.SetResult(null);
                             _stateWatchers.RemoveAt(i);
+                            stateWatcher.Tcs.SetResult(null);
                         }
                     }
                 }
@@ -296,6 +300,7 @@ namespace Grpc.Net.Client.Balancer.Internal
                 {
                     ConnectionManagerLog.ChannelPickerUpdated(Logger);
                     _picker = state.Picker;
+                    _pickerTask = Task.FromResult(state.Picker);
                     _nextPickerTcs.SetResult(state.Picker);
                     _nextPickerTcs = new TaskCompletionSource<SubchannelPicker>(TaskCreationOptions.RunContinuationsAsynchronously);
                 }
@@ -360,63 +365,21 @@ namespace Grpc.Net.Client.Balancer.Internal
             }
         }
 
-        private
-#if !NETSTANDARD2_0
-            ValueTask<SubchannelPicker>
-#else
-            Task<SubchannelPicker>
-#endif
-            GetPickerAsync(SubchannelPicker? currentPicker, CancellationToken cancellationToken)
+        private Task<SubchannelPicker> GetPickerAsync(SubchannelPicker? currentPicker, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
                 if (_picker != null && _picker != currentPicker)
                 {
-#if !NETSTANDARD2_0
-                    return new ValueTask<SubchannelPicker>(_picker);
-#else
-                    return Task.FromResult<SubchannelPicker>(_picker);
-#endif
+                    Debug.Assert(_pickerTask != null);
+                    return _pickerTask;
                 }
                 else
                 {
-                    return GetNextPickerAsync(cancellationToken);
+                    ConnectionManagerLog.PickWaiting(Logger);
+
+                    return _nextPickerTcs.Task.WaitAsync(cancellationToken);
                 }
-            }
-        }
-
-        private async
-#if !NETSTANDARD2_0
-            ValueTask<SubchannelPicker>
-#else
-            Task<SubchannelPicker>
-#endif
-            GetNextPickerAsync(CancellationToken cancellationToken)
-        {
-            ConnectionManagerLog.PickWaiting(Logger);
-
-            Debug.Assert(Monitor.IsEntered(_lock));
-
-            var nextPickerTcs = _nextPickerTcs;
-
-            await _nextPickerLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                using (cancellationToken.Register(s => ((TaskCompletionSource<SubchannelPicker?>)s!).TrySetCanceled(), nextPickerTcs))
-                {
-                    var nextPicker = await nextPickerTcs.Task.ConfigureAwait(false);
-
-                    lock (_lock)
-                    {
-                        _nextPickerTcs = new TaskCompletionSource<SubchannelPicker>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    }
-
-                    return nextPicker;
-                }
-            }
-            finally
-            {
-                _nextPickerLock.Release();
             }
         }
 
@@ -474,8 +437,22 @@ namespace Grpc.Net.Client.Balancer.Internal
             }
         }
 
-        // Don't use a record struct here. This type is cast to object and a struct will box.
-        private record StateWatcher(CancellationToken CancellationToken, ConnectivityState? WaitForState, TaskCompletionSource<object?> Tcs);
+        // Use a standard class for the watcher because:
+        // 1. On cancellation, a watcher is removed from collection. Should use default Equals implementation. Record overrides Equals.
+        // 2. This type is cast to object. A struct will box.
+        private sealed class StateWatcher
+        {
+            public StateWatcher(CancellationToken cancellationToken, ConnectivityState? waitForState, TaskCompletionSource<object?> tcs)
+            {
+                CancellationToken = cancellationToken;
+                WaitForState = waitForState;
+                Tcs = tcs;
+            }
+
+            public CancellationToken CancellationToken { get; }
+            public ConnectivityState? WaitForState { get; }
+            public TaskCompletionSource<object?> Tcs { get; }
+        }
     }
 
     internal static class ConnectionManagerLog
