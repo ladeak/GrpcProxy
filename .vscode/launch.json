@@ -32,8 +32,8 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/GrpcProxy/bin/Debug/net6.0/GrpcProxy.dll",
-            "args": ["--contentRoot=/workspaces/GrpcProxy/src/GrpcProxy/bin/Debug/net6.0/"],
-            "cwd": "${workspaceFolder}",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/GrpcProxy/",
             "stopAtEntry": false,
             "console": "internalConsole"
         }

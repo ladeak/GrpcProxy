@@ -36,6 +36,9 @@
     <None Update="grpc_csharp_plugin.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="grpc_csharp_plugin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="protoc">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
