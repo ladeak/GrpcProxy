@@ -18,7 +18,9 @@ public class ProxyMessageMediator : IProxyMessageMediator
             DateTime.UtcNow, $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}",
             context.Request.Headers.Select(x => $"{x.Key}: {x.Value}").ToList(),
             context.Request.Path,
-            data, methodType.ToString());
+            data,
+            methodType.ToString(),
+            IsCancelled: false);
         return _channel.Writer.WriteAsync(message);
     }
 
@@ -32,12 +34,27 @@ public class ProxyMessageMediator : IProxyMessageMediator
             path,
             data,
             methodType.ToString(),
+            IsCancelled: false,
             response.StatusCode);
+        return _channel.Writer.WriteAsync(message);
+    }
+
+    public ValueTask AddCancellationAsync(HttpContext context, Guid proxyCallId, MethodType methodType)
+    {
+        var message = new ProxyMessage(
+            proxyCallId,
+            MessageDirection.Request,
+            DateTime.UtcNow, $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}",
+            new List<string>(),
+            context.Request.Path,
+            string.Empty,
+            methodType.ToString(),
+            IsCancelled: true);
         return _channel.Writer.WriteAsync(message);
     }
 }
 
-public record ProxyMessage(Guid ProxyCallId, MessageDirection Direction, DateTime Timestamp, string Endpoint, List<string> Headers, string Path, string Message, string MethodType, HttpStatusCode? StatusCode = null)
+public record ProxyMessage(Guid ProxyCallId, MessageDirection Direction, DateTime Timestamp, string Endpoint, List<string> Headers, string Path, string Message, string MethodType, bool IsCancelled, HttpStatusCode? StatusCode = null)
 {
     public bool Contains(string text)
     {
@@ -56,5 +73,5 @@ public record ProxyMessage(Guid ProxyCallId, MessageDirection Direction, DateTim
 public enum MessageDirection
 {
     Request = 1,
-    Response = 2,
+    Response = 2
 }

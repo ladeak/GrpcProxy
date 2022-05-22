@@ -190,6 +190,10 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
 
             _status = rpcException.Status;
         }
+        if (ex is OperationCanceledException)
+        {
+            _status = Status.DefaultCancelled;
+        }
         else
         {
             var message = "Exception was thrown by handler.";
