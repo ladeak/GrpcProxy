@@ -149,66 +149,56 @@ internal static partial class ProxyPipeExtensions
     public static async ValueTask<T?> ReadStreamMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction, CancellationToken cancellationToken = default)
         where T : class
     {
-        try
+        while (true)
         {
-            while (true)
+            var completeMessage = false;
+            var result = await input.ReadAsync(cancellationToken);
+            var buffer = result.Buffer;
+
+            try
             {
-                var completeMessage = false;
-                var result = await input.ReadAsync(cancellationToken);
-                var buffer = result.Buffer;
+                if (result.IsCanceled)
+                    throw new TaskCanceledException("Request cancelled");
 
-                try
+                if (!buffer.IsEmpty)
                 {
-                    if (result.IsCanceled)
+                    if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
                     {
-                        throw new RpcException(MessageCancelledStatus);
-                    }
-
-                    if (!buffer.IsEmpty)
-                    {
-                        if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
-                        {
-                            completeMessage = true;
-                            T request;
-                            if (direction == MessageDirection.Request)
-                                request = DeserializeRequest(serverCallContext, deserializer, data);
-                            else
-                                request = DeserializeResponse(serverCallContext, deserializer, data);
-                            return request;
-                        }
-                    }
-
-                    if (result.IsCompleted)
-                    {
-                        if (buffer.Length == 0)
-                        {
-                            // Finished and there is no more data
-                            return default;
-                        }
-
-                        throw new RpcException(IncompleteMessageStatus);
+                        completeMessage = true;
+                        T request;
+                        if (direction == MessageDirection.Request)
+                            request = DeserializeRequest(serverCallContext, deserializer, data);
+                        else
+                            request = DeserializeResponse(serverCallContext, deserializer, data);
+                        return request;
                     }
                 }
-                finally
+
+                if (result.IsCompleted)
                 {
-                    // The buffer was sliced up to where it was consumed, so we can just advance to the start.
-                    if (completeMessage)
+                    if (buffer.Length == 0)
                     {
-                        input.AdvanceTo(buffer.Start);
+                        // Finished and there is no more data
+                        return default;
                     }
-                    else
-                    {
-                        // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
-                        // before yielding the read again.
-                        input.AdvanceTo(buffer.Start, buffer.End);
-                    }
+
+                    throw new InvalidOperationException("Data stream ended before receiveing a single message.");
                 }
             }
-        }
-        catch (Exception ex) when (!(ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
-        {
-            // Don't write error when user cancels read
-            throw;
+            finally
+            {
+                // The buffer was sliced up to where it was consumed, so we can just advance to the start.
+                if (completeMessage)
+                {
+                    input.AdvanceTo(buffer.Start);
+                }
+                else
+                {
+                    // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
+                    // before yielding the read again.
+                    input.AdvanceTo(buffer.Start, buffer.End);
+                }
+            }
         }
     }
 

@@ -10,7 +10,14 @@
 			</div>
 		</div>
 		<div class="card-body">
-			<b>Content:</b> @Message.Message<br>
+			@if (!Message.IsCancelled)
+			{
+				<b>Content:</b> @Message.Message
+			}else
+			{
+				<text>Cancelled</text>
+			}
+			<br>
 			<div class="@Collapsible">
 				<b>ProxyId:</b> @Message.ProxyCallId<br>
 				@if (Message.StatusCode.HasValue)

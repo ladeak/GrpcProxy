@@ -48,11 +48,6 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
             await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
             throw;
         }
-        catch (Exception)
-        {
-            // TODO aggregate?
-            throw;
-        }
     }
 
     private async Task ForwardResponseAsync(Guid proxyCallId, ForwardingContext sending, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
@@ -66,11 +61,6 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
         catch (TaskCanceledException)
         {
             await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
-            throw;
-        }
-        catch (Exception)
-        {
-            // TODO aggregate?
             throw;
         }
     }
