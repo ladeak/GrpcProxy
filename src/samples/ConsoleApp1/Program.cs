@@ -85,8 +85,9 @@ class Program
 
     private static async Task UnaryMessageAsync(SuperService.SuperServiceClient client)
     {
+        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000));
         var request = new RequestData() { Message = "Pocak" };
-        var response = await client.DoWorkAsync(request);
+        var response = await client.DoWorkAsync(request, new CallOptions(cancellationToken: cts.Token));
         Console.WriteLine(response.Message);
     }
 

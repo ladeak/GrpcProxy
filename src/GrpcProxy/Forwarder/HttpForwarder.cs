@@ -12,7 +12,7 @@ internal sealed class HttpForwarder
 {
     private static readonly Version DefaultVersion = HttpVersion.Version20;
 
-    public async ValueTask<(HttpResponseMessage ResponseMessage, StreamCopyHttpContent? StreamCopyContent)> SendRequestAsync(
+    public async Task<ForwardingContext> SendRequestAsync(
         HttpContext context,
         string destinationPrefix,
         HttpClient httpClient,
@@ -32,20 +32,12 @@ internal sealed class HttpForwarder
 
         // Step 4: Send the outgoing request using HttpClient
         HttpResponseMessage destinationResponse;
-        try
-        {
-            destinationResponse = await httpClient.SendAsync(destinationRequest, HttpCompletionOption.ResponseHeadersRead, proxyContext.CancellationToken);
-        }
-        catch (Exception)
-        {
-            throw;
-            //await HandleRequestFailureAsync(context, requestContent, requestException, transformer, token);
-        }
+        destinationResponse = await httpClient.SendAsync(destinationRequest, HttpCompletionOption.ResponseHeadersRead, proxyContext.CancellationToken);
         proxyContext.ProxiedResponseMessage = destinationResponse;
-        return (destinationResponse, requestContent);
+        return new ForwardingContext(destinationResponse, requestContent);
     }
 
-    public async ValueTask<ForwarderError> ReturnResponseAsync(
+    public async Task<ForwarderError> ReturnResponseAsync(
         HttpContext context,
         StreamCopyHttpContent? requestContent,
         HttpTransformer transformer,
@@ -194,11 +186,6 @@ internal sealed class HttpForwarder
 
         // Step 3: Copy request headers Client --► Proxy --► Destination
         await transformer.TransformRequestAsync(context, destinationRequest, destinationPrefix);
-
-        //if (isUpgradeRequest)
-        //{
-        //    RestoreUpgradeHeaders(context, destinationRequest);
-        //}
 
         // Allow someone to custom build the request uri, otherwise provide a default for them.
         var request = context.Request;

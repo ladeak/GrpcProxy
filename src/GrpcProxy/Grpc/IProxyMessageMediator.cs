@@ -10,5 +10,7 @@ namespace GrpcProxy.Grpc
         ValueTask AddRequestAsync(HttpContext context, Guid proxyCallId, MethodType methodType, string data);
 
         ValueTask AddResponseAsync(HttpResponseMessage response, string serviceAddress, Guid proxyCallId, string path, MethodType methodType, string data);
+
+        ValueTask AddCancellationAsync(HttpContext context, Guid proxyCallId, MethodType methodType);
     }
 }

@@ -10,8 +10,8 @@ namespace Service
 
         public override async Task<ResponseData> DoWork(RequestData request, ServerCallContext context)
         {
-            await Task.Delay(10);
             Console.WriteLine("Processing");
+            await Task.Delay(10000);
             return new ResponseData { Message = $"Hello {request.Message}" };
         }
 

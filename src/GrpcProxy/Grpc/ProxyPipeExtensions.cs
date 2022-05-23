@@ -83,145 +83,122 @@ internal static partial class ProxyPipeExtensions
         }
     }
 
-    public static async ValueTask<T> ReadSingleMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction)
+    public static async Task<T> ReadSingleMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction)
     where T : class
     {
-        try
+        T? request = null;
+
+        while (true)
         {
-            T? request = null;
+            var result = await input.ReadAsync(serverCallContext.CancellationToken);
+            var buffer = result.Buffer;
 
-            while (true)
+            try
             {
-                var result = await input.ReadAsync();
-                var buffer = result.Buffer;
+                if (result.IsCanceled)
+                    throw new TaskCanceledException("Request cancelled");
 
-                try
+                if (!buffer.IsEmpty)
                 {
-                    if (result.IsCanceled)
+                    if (request != null)
+                        throw new InvalidOperationException("Received data after reading single message.");
+
+                    if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
                     {
-                        throw new RpcException(MessageCancelledStatus);
-                    }
+                        if (direction == MessageDirection.Request)
+                            request = DeserializeRequest(serverCallContext, deserializer, data);
+                        else
+                            request = DeserializeResponse(serverCallContext, deserializer, data);
 
-                    if (!buffer.IsEmpty)
-                    {
-                        if (request != null)
-                        {
-                            throw new RpcException(AdditionalDataStatus);
-                        }
-
-                        if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
-                        {
-                            if (direction == MessageDirection.Request)
-                                request = DeserializeRequest(serverCallContext, deserializer, data);
-                            else
-                                request = DeserializeResponse(serverCallContext, deserializer, data);
-
-                            // Store the request
-                            // Need to verify the request completes with no additional data
-                        }
-                    }
-
-                    if (result.IsCompleted)
-                    {
-                        if (request != null)
-                        {
-                            // Additional data came with message
-                            if (buffer.Length > 0)
-                            {
-                                throw new RpcException(AdditionalDataStatus);
-                            }
-
-                            return request;
-                        }
-
-                        throw new RpcException(IncompleteMessageStatus);
+                        // Store the request
+                        // Need to verify the request completes with no additional data
                     }
                 }
-                finally
+
+                if (result.IsCompleted)
                 {
-                    // The buffer was sliced up to where it was consumed, so we can just advance to the start.
                     if (request != null)
                     {
-                        input.AdvanceTo(buffer.Start);
+                        // Additional data came with message
+                        if (buffer.Length > 0)
+                            throw new InvalidOperationException("Received data after reading single message.");
+
+                        return request;
                     }
-                    else
-                    {
-                        // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
-                        // before yielding the read again.
-                        input.AdvanceTo(buffer.Start, buffer.End);
-                    }
+
+                    throw new InvalidOperationException("Data stream ended before receiveing a single message.");
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            throw;
+            finally
+            {
+                // The buffer was sliced up to where it was consumed, so we can just advance to the start.
+                if (request != null)
+                {
+                    input.AdvanceTo(buffer.Start);
+                }
+                else
+                {
+                    // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
+                    // before yielding the read again.
+                    input.AdvanceTo(buffer.Start, buffer.End);
+                }
+            }
         }
     }
 
     public static async ValueTask<T?> ReadStreamMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction, CancellationToken cancellationToken = default)
         where T : class
     {
-        try
+        while (true)
         {
-            while (true)
+            var completeMessage = false;
+            var result = await input.ReadAsync(cancellationToken);
+            var buffer = result.Buffer;
+
+            try
             {
-                var completeMessage = false;
-                var result = await input.ReadAsync(cancellationToken);
-                var buffer = result.Buffer;
+                if (result.IsCanceled)
+                    throw new TaskCanceledException("Request cancelled");
 
-                try
+                if (!buffer.IsEmpty)
                 {
-                    if (result.IsCanceled)
+                    if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
                     {
-                        throw new RpcException(MessageCancelledStatus);
-                    }
-
-                    if (!buffer.IsEmpty)
-                    {
-                        if (TryReadMessage(ref buffer, serverCallContext, direction, out var data))
-                        {
-                            completeMessage = true;
-                            T request;
-                            if (direction == MessageDirection.Request)
-                                request = DeserializeRequest(serverCallContext, deserializer, data);
-                            else
-                                request = DeserializeResponse(serverCallContext, deserializer, data);
-                            return request;
-                        }
-                    }
-
-                    if (result.IsCompleted)
-                    {
-                        if (buffer.Length == 0)
-                        {
-                            // Finished and there is no more data
-                            return default;
-                        }
-
-                        throw new RpcException(IncompleteMessageStatus);
+                        completeMessage = true;
+                        T request;
+                        if (direction == MessageDirection.Request)
+                            request = DeserializeRequest(serverCallContext, deserializer, data);
+                        else
+                            request = DeserializeResponse(serverCallContext, deserializer, data);
+                        return request;
                     }
                 }
-                finally
+
+                if (result.IsCompleted)
                 {
-                    // The buffer was sliced up to where it was consumed, so we can just advance to the start.
-                    if (completeMessage)
+                    if (buffer.Length == 0)
                     {
-                        input.AdvanceTo(buffer.Start);
+                        // Finished and there is no more data
+                        return default;
                     }
-                    else
-                    {
-                        // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
-                        // before yielding the read again.
-                        input.AdvanceTo(buffer.Start, buffer.End);
-                    }
+
+                    throw new InvalidOperationException("Data stream ended before receiveing a single message.");
                 }
             }
-        }
-        catch (Exception ex) when (!(ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
-        {
-            // Don't write error when user cancels read
-            throw;
+            finally
+            {
+                // The buffer was sliced up to where it was consumed, so we can just advance to the start.
+                if (completeMessage)
+                {
+                    input.AdvanceTo(buffer.Start);
+                }
+                else
+                {
+                    // We mark examined as buffer.End so that if we didn't receive a full frame, we'll wait for more data
+                    // before yielding the read again.
+                    input.AdvanceTo(buffer.Start, buffer.End);
+                }
+            }
         }
     }
 

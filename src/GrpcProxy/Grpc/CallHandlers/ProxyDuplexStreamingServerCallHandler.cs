@@ -31,24 +31,29 @@ namespace GrpcProxy.Grpc.CallHandlers
         protected override async Task HandleCallAsyncCore(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             BodySizeFeatureHelper.DisableMinRequestBodyDataRateAndMaxRequestBodySize(httpContext);
-
             var proxyCallId = Guid.NewGuid();
-            serverCallContext.CancellationToken.Register(_ => { Console.WriteLine("cancellation requested"); }, null, false);
+            try
+            {
+                var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, serverCallContext);
+                var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext, proxyCallId);
 
-            var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, serverCallContext);
-            var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext, proxyCallId);
+                var returningResponseTask = _httpForwarder.ReturnResponseAsync(httpContext, sending.StreamCopyContent, HttpTransformer.Empty, serverCallContext);
+                var deserializingResponseTask = DeserializingResponseAsync(httpContext, serverCallContext, proxyCallId, sending.ResponseMessage);
 
-            var returningResponseTask = _httpForwarder.ReturnResponseAsync(httpContext, sending.StreamCopyContent, HttpTransformer.Empty, serverCallContext);
-            var deserializingResponseTask = DeserializingResponseAsync(httpContext, serverCallContext, proxyCallId, sending.ResponseMessage);
-
-            await deserializingRequestTask;
-            await deserializingResponseTask;
-            await returningResponseTask;
+                await deserializingRequestTask;
+                await deserializingResponseTask;
+                await returningResponseTask;
+            }
+            catch (TaskCanceledException)
+            {
+                await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
+                throw;
+            }
         }
 
         private async ValueTask DeserializingRequestsAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId)
         {
-            while (true)
+            while (!serverCallContext.CancellationToken.IsCancellationRequested)
             {
                 var message = await serverCallContext.RequestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Request, CancellationToken.None);
                 if (message == null)
@@ -59,7 +64,7 @@ namespace GrpcProxy.Grpc.CallHandlers
 
         private async ValueTask DeserializingResponseAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId, HttpResponseMessage response)
         {
-            while (true)
+            while (!serverCallContext.CancellationToken.IsCancellationRequested)
             {
                 var message = await serverCallContext.ResponsePipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer, MessageDirection.Response, CancellationToken.None);
                 if (message == null)

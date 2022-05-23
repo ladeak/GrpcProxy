@@ -5,17 +5,26 @@
 	<div class="card" style="margin-bottom: 5px;">
 		<div class="card-header">
 			<div class="row">
-				<div class="col">@Message.Timestamp <span class="badge @BadgeColor">@Message.MethodType @Message.Direction</span> <b>@SourceDisplay:</b> @Message.Endpoint <b>Path:</b> @Message.Path</div>
+				<div class="col">@Message.Timestamp <span class="badge @BadgeColor">@Message.MethodType @Direction</span> <b>@SourceDisplay:</b> @Message.Endpoint <b>Path:</b> @Message.Path</div>
 				<div class="col-md-auto text-end"><Button class="btn btn-outline-info btn-sm" type="button" @onclick="ToggleDetails">Details</Button></div>
 			</div>
 		</div>
 		<div class="card-body">
-			<b>Content:</b> @Message.Message<br>
+			@if (!Message.IsCancelled)
+			{
+				<b>Content:</b> @Message.Message
+			}else
+			{
+				<text>Cancelled</text>
+			}
+			<br>
 			<div class="@Collapsible">
 				<b>ProxyId:</b> @Message.ProxyCallId<br>
 				@if (Message.StatusCode.HasValue)
 				{
-					<b>Status Code: </b> @Message.StatusCode.Value<br>
+					<b>Status Code: </b> @Message.StatusCode.Value
+
+					<br>
 				}
 				<b>Headers:</b><br>
 				<ul>
@@ -34,9 +43,35 @@
 	[Parameter]
 	public ProxyMessage? Message { get; set; }
 
-	public string SourceDisplay => (Message?.Direction == MessageDirection.Request ? "Client" : "Server") ?? "Unkown";
+	public string SourceDisplay
+	{
+		get
+		{
+			if (Message == null || Message.IsCancelled)
+				return "Client";
+			return Message.Direction == MessageDirection.Request ? "Client" : "Server";
+		}
+	}
 
-	public string BadgeColor => (Message?.Direction == MessageDirection.Request ? "bg-primary" : "bg-warning text-dark") ?? "bg-danger";
+	public string BadgeColor
+	{
+		get
+		{
+			if (Message == null || Message.IsCancelled)
+				return "bg-danger";
+			return Message.Direction == MessageDirection.Request ? "bg-primary" : "bg-warning text-dark";
+		}
+	}
+
+	public string Direction
+	{
+		get
+		{
+			if (Message == null || Message.IsCancelled)
+				return "Cancelled";
+			return Message.Direction.ToString();
+		}
+	}
 
 	private bool isCollapsed = true;
 
