@@ -253,13 +253,14 @@ internal class StreamCopier
         }
         catch (Exception ex)
         {
-            var result = ex is OperationCanceledException ? StreamCopyResult.Canceled :
+            var result = ex is OperationCanceledException || cancellation.IsCancellationRequested ? StreamCopyResult.Canceled :
                 (read == 0 ? StreamCopyResult.InputError : StreamCopyResult.OutputError);
 
             return (result, ex);
         }
         finally
         {
+            await pipe.CompleteAsync();
             if (buffer is not null)
             {
                 ArrayPool<byte>.Shared.Return(buffer);

@@ -21,7 +21,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     private AuthContext? _authContext;
     private Activity? _activity;
     private Pipe? _requestPipe;
-    private Pipe? _reponsePipe;
+    private Pipe? _responsePipe;
     private DefaultDeserializationContext? _requestDeserializationContext;
     private DefaultDeserializationContext? _responseDeserializationContext;
     private HttpResponseMessage? _proxiedResponse;
@@ -78,7 +78,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
 
     internal Pipe ResponsePipe
     {
-        get => _reponsePipe ??= new Pipe();
+        get => _responsePipe ??= new Pipe();
     }
 
     internal HttpResponseMessage? ProxiedResponseMessage
@@ -234,6 +234,16 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
 
     internal Task EndCallAsync()
     {
+        _requestPipe?.Writer.CancelPendingFlush();
+        _requestPipe?.Writer.Complete();
+        _requestPipe?.Reader.CancelPendingRead();
+        _requestPipe?.Reader.CompleteAsync();
+
+        _responsePipe?.Writer.CancelPendingFlush();
+        _responsePipe?.Writer.Complete();
+        _responsePipe?.Reader.CancelPendingRead();
+        _responsePipe?.Reader.CompleteAsync();
+
         ConsolidateTrailers(HttpContext.Response);
         return Task.CompletedTask;
     }

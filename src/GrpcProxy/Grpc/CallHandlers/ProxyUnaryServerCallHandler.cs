@@ -43,7 +43,7 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
             await Task.WhenAll(sendingTask, deserializationTask);
             return sendingTask.Result;
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
             await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
             throw;
@@ -58,7 +58,7 @@ internal class ProxyUnaryServerCallHandler<TRequest, TResponse> : ProxyServerCal
             var deserializationTask = DeserializingResponseAsync(proxyCallId, sending, httpContext, serverCallContext);
             await Task.WhenAll(responseTask, deserializationTask);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
             await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
             throw;

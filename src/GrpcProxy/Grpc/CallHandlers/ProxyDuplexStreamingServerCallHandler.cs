@@ -44,7 +44,7 @@ namespace GrpcProxy.Grpc.CallHandlers
                 await deserializingResponseTask;
                 await returningResponseTask;
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
                 throw;

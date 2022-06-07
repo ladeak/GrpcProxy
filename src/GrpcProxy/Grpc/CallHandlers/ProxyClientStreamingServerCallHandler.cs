@@ -45,7 +45,7 @@ namespace GrpcProxy.Grpc.CallHandlers
                 await Task.WhenAll(sendingTask, deserializationTask);
                 return sendingTask.Result;
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
                 throw;
@@ -60,7 +60,7 @@ namespace GrpcProxy.Grpc.CallHandlers
                 var deserializationTask = DeserializingResponseAsync(proxyCallId, sending, httpContext, serverCallContext);
                 await Task.WhenAll(responseTask, deserializationTask);
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
                 throw;

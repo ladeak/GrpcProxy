@@ -37,11 +37,27 @@ internal sealed class HttpForwarder
         return new ForwardingContext(destinationResponse, requestContent);
     }
 
-    public async Task<ForwarderError> ReturnResponseAsync(
+    public async Task ReturnResponseAsync(
         HttpContext context,
         StreamCopyHttpContent? requestContent,
         HttpTransformer transformer,
         ProxyHttpContextServerCallContext proxyContext)
+    {
+        var result = await ReturnResponseWithErrorAsync(context, requestContent, transformer, proxyContext);
+        if (result == ForwarderError.RequestBodyCanceled
+            || result == ForwarderError.RequestCanceled
+            || result == ForwarderError.ResponseBodyCanceled
+            || result == ForwarderError.UpgradeRequestCanceled
+            || result == ForwarderError.UpgradeResponseCanceled
+            || result == ForwarderError.RequestTimedOut)
+            throw new OperationCanceledException();
+    }
+
+    public async Task<ForwarderError> ReturnResponseWithErrorAsync(
+    HttpContext context,
+    StreamCopyHttpContent? requestContent,
+    HttpTransformer transformer,
+    ProxyHttpContextServerCallContext proxyContext)
     {
         var isClientHttp2 = true;
         var isStreamingRequest = true;
@@ -397,11 +413,6 @@ internal sealed class HttpForwarder
         if (requestContent is not null && requestContent.Started)
         {
             var alreadyFinished = requestContent.ConsumptionTask.IsCompleted == true;
-
-            if (!alreadyFinished)
-            {
-            }
-
             var (requestBodyCopyResult, requestBodyError) = await requestContent.ConsumptionTask;
 
             // Check for request body errors, these may have triggered the response error.
