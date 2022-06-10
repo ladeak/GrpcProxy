@@ -205,6 +205,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
             // It is still useful to set in case an interceptor accesses the status on the server.
             _status = new Status(StatusCode.Unknown, message, ex);
         }
+        ClosePipes();
         ConsolidateTrailers(HttpContext.Response);
     }
 
@@ -234,18 +235,27 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
 
     internal Task EndCallAsync()
     {
-        _requestPipe?.Writer.CancelPendingFlush();
-        _requestPipe?.Writer.Complete();
-        _requestPipe?.Reader.CancelPendingRead();
-        _requestPipe?.Reader.CompleteAsync();
-
-        _responsePipe?.Writer.CancelPendingFlush();
-        _responsePipe?.Writer.Complete();
-        _responsePipe?.Reader.CancelPendingRead();
-        _responsePipe?.Reader.CompleteAsync();
-
+        ClosePipes();
         ConsolidateTrailers(HttpContext.Response);
         return Task.CompletedTask;
+    }
+
+    private void ClosePipes()
+    {
+        if (_requestPipe != null)
+        {
+            _requestPipe.Writer.CancelPendingFlush();
+            _requestPipe.Writer.Complete();
+            _requestPipe.Reader.CancelPendingRead();
+            _requestPipe.Reader.Complete();
+        }
+        if (_responsePipe != null)
+        {
+            _responsePipe.Writer.CancelPendingFlush();
+            _responsePipe.Writer.Complete();
+            _responsePipe.Reader.CancelPendingRead();
+            _responsePipe.Reader.Complete();
+        }
     }
 
     protected override WriteOptions? WriteOptionsCore { get; set; }

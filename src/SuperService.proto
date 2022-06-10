@@ -12,6 +12,8 @@ service SuperService {
   rpc StreamResult(RequestData) returns (stream ResponseData) {}
 
   rpc DuplexStreaming(stream RequestData) returns (stream ResponseData) {}
+
+  rpc DuplexSyncStreaming(stream RequestData) returns (stream ResponseData) {}
 }
 
 message RequestData {
