@@ -50,7 +50,7 @@ class Program
     private static async Task DuplexSyncStreamingAsync(SuperService.SuperServiceClient client)
     {
         bool hasNext = true;
-        using var streamOfWork = client.DuplexStreaming();
+        using var streamOfWork = client.DuplexSyncStreaming();
         for (int i = 0; i < 3; i++)
         {
             var request = new RequestData() { Message = "Pocak" };
@@ -64,28 +64,33 @@ class Program
         await streamOfWork.RequestStream.CompleteAsync();
     }
 
+    private const int Timeout = 300;
+
     private static async Task DuplexStreamingAsync(SuperService.SuperServiceClient client)
     {
-        using var streamOfWork = client.DuplexStreaming();
+        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Timeout));
+        using var streamOfWork = client.DuplexStreaming(cancellationToken: cts.Token);
         await Task.WhenAll(SendingAsync(streamOfWork.RequestStream), ReceivingAsync(streamOfWork.ResponseStream));
     }
 
     private static async Task ServerStreamingAsync(SuperService.SuperServiceClient client)
     {
-        var streamOfWork = client.StreamResult(new RequestData() { Message = "Requesting Streamed Data" });
+        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Timeout));
+        var streamOfWork = client.StreamResult(new RequestData() { Message = "Requesting Streamed Data" }, cancellationToken: cts.Token);
         await ReceivingAsync(streamOfWork.ResponseStream);
     }
 
     private static async Task ClientStreamingAsync(SuperService.SuperServiceClient client)
     {
-        using var streamOfWork = client.StreamWork();
+        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Timeout));
+        using var streamOfWork = client.StreamWork(cancellationToken: cts.Token);
         await SendingAsync(streamOfWork.RequestStream);
         Console.WriteLine((await streamOfWork).Message);
     }
 
     private static async Task UnaryMessageAsync(SuperService.SuperServiceClient client)
     {
-        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000));
+        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Timeout));
         var request = new RequestData() { Message = "Pocak" };
         var response = await client.DoWorkAsync(request, new CallOptions(cancellationToken: cts.Token));
         Console.WriteLine(response.Message);
@@ -97,6 +102,7 @@ class Program
         {
             var request = new RequestData() { Message = "Pocak" };
             await requestStream.WriteAsync(request);
+            await Task.Delay(20);
         }
         await requestStream.CompleteAsync();
     }

@@ -7,11 +7,12 @@ namespace Service
     public class SuperServiceImpl : SuperService.SuperServiceBase
     {
         private static readonly DiagnosticListener _diagnostics = new DiagnosticListener(nameof(Service));
+        private const int WorkDuration = 10000;
 
         public override async Task<ResponseData> DoWork(RequestData request, ServerCallContext context)
         {
             Console.WriteLine("Processing");
-            await Task.Delay(10000);
+            await Task.Delay(WorkDuration);
             return new ResponseData { Message = $"Hello {request.Message}" };
         }
 
@@ -28,13 +29,18 @@ namespace Service
 
         public override async Task DuplexStreaming(IAsyncStreamReader<RequestData> requestStream, IServerStreamWriter<ResponseData> responseStream, ServerCallContext context)
         {
-            //await Task.WhenAll(SendingStreamAsync(responseStream), ReceivingStreamAsync(requestStream))
+            await Task.WhenAll(SendingStreamAsync(responseStream), ReceivingStreamAsync(requestStream));
+        }
+
+        public override async Task DuplexSyncStreaming(IAsyncStreamReader<RequestData> requestStream, IServerStreamWriter<ResponseData> responseStream, ServerCallContext context)
+        {
             int i = 0;
             await foreach (var item in requestStream.ReadAllAsync())
                 if (!string.IsNullOrWhiteSpace(item.Message))
                 {
                     Console.WriteLine($"Processing Stream {i++}");
                     await responseStream.WriteAsync(new ResponseData { Message = $"Response part {i}" });
+                    await Task.Delay(WorkDuration);
                 }
         }
 
@@ -42,8 +48,11 @@ namespace Service
         {
             int i = 0;
             await foreach (var item in requestStream.ReadAllAsync())
+            {
+                await Task.Delay(WorkDuration);
                 if (!string.IsNullOrWhiteSpace(item.Message))
                     Console.WriteLine($"Processing Stream {i++}");
+            }
             return i;
         }
 
@@ -51,7 +60,10 @@ namespace Service
         {
             Console.WriteLine("Streaming Responses");
             for (int i = 0; i < 3; i++)
+            {
                 await responseStream.WriteAsync(new ResponseData { Message = $"Response part {i}" });
+                await Task.Delay(WorkDuration);
+            }
         }
     }
 }
