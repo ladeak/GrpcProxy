@@ -1,11 +1,15 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using Grpc.AspNetCore.Server.Internal;
 using Grpc.Core;
 using Grpc.Net.Compression;
+
+[assembly: InternalsVisibleTo("GrpcProxy.Tests,PublicKey=0024000004800000940000000602000000240000525341310004000001000100559241db3eede61e2f8d3c7c2cb37cbde5999cf9e88c4611030cd65985c15f12f0290a39ff3938239b3d0a2d545777a03a3c43c31d8bebc93b5ff7727bfd79d3eeb20ab2b7c0930d9b14f1bb5bba4b473e263f86bc6495b1a13da1daeb2e5a0b5656d71795de85092426e8f681844af085b67f2ae40701f74d876ee27c65d8b6")]
 
 namespace GrpcProxy.Grpc;
 
@@ -146,6 +150,83 @@ internal static partial class ProxyPipeExtensions
         }
     }
 
+    public static async Task<T> ReadSingleMessageAsync<T>(this Stream input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction)
+    where T : class
+    {
+        var headerBuffer = ArrayPool<byte>.Shared.Rent(5);
+        byte[]? payloadBuffer = null;
+        try
+        {
+            await input.ReadExactlyAsync(headerBuffer, 0, HeaderSize, serverCallContext.CancellationToken);
+            var compressed = ReadCompressedFlag(headerBuffer[0]);
+            var messageLength = DecodeMessageLength(headerBuffer.AsSpan(1));
+            ArrayPool<byte>.Shared.Return(headerBuffer);
+
+            if (messageLength > serverCallContext.Options.MaxReceiveMessageSize)
+                throw new InvalidOperationException(ReceivedMessageExceedsLimitStatus.Detail);
+
+            payloadBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
+            await input.ReadExactlyAsync(payloadBuffer, 0, messageLength, serverCallContext.CancellationToken);
+            var result = ParseMessage(serverCallContext, deserializer, direction, new ReadOnlySequence<byte>(payloadBuffer, 0, messageLength), compressed);
+
+            if (input.Length > input.Position)
+                throw new InvalidOperationException("More data available than expected");
+
+            return result;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(headerBuffer);
+            if (payloadBuffer != null)
+                ArrayPool<byte>.Shared.Return(payloadBuffer);
+        }
+    }
+
+    private static T ParseMessage<T>(ProxyHttpContextServerCallContext serverCallContext,
+        Func<DeserializationContext, T> deserializer, MessageDirection direction,
+        ReadOnlySequence<byte> messageBuffer, bool compressed) where T : class
+    {
+        ReadOnlySequence<byte>? message;
+        if (compressed)
+        {
+            var encoding = GetGrpcEncoding(serverCallContext, direction);
+            if (encoding == null)
+            {
+                throw new InvalidOperationException(NoMessageEncodingMessageStatus.Detail);
+            }
+            if (GrpcProtocolConstants.IsGrpcEncodingIdentity(encoding))
+            {
+                throw new InvalidOperationException(IdentityMessageEncodingMessageStatus.Detail);
+            }
+
+            // Performance improvement would be to decompress without converting to an intermediary byte array
+            if (!TryDecompressMessage(encoding, serverCallContext.Options.CompressionProviders, messageBuffer, out var decompressedMessage))
+            {
+                // https://github.com/grpc/grpc/blob/master/doc/compression.md#test-cases
+                // A message compressed by a client in a way not supported by its server MUST fail with status UNIMPLEMENTED,
+                // its associated description indicating the unsupported condition as well as the supported ones. The returned
+                // grpc-accept-encoding header MUST NOT contain the compression method (encoding) used.
+                var supportedEncodings = new List<string>();
+                supportedEncodings.Add(GrpcProtocolConstants.IdentityGrpcEncoding);
+                supportedEncodings.AddRange(serverCallContext.Options.CompressionProviders.Select(p => p.Key));
+
+                throw new InvalidOperationException(CreateUnknownMessageEncodingMessageStatus(encoding, supportedEncodings).Detail);
+            }
+
+            message = decompressedMessage;
+        }
+        else
+        {
+            message = messageBuffer;
+        }
+        T request;
+        if (direction == MessageDirection.Request)
+            request = DeserializeRequest(serverCallContext, deserializer, message);
+        else
+            request = DeserializeResponse(serverCallContext, deserializer, message);
+        return request;
+    }
+
     public static async ValueTask<T?> ReadStreamMessageAsync<T>(this PipeReader input, ProxyHttpContextServerCallContext serverCallContext, Func<DeserializationContext, T> deserializer, MessageDirection direction, CancellationToken cancellationToken = default)
         where T : class
     {
@@ -212,7 +293,7 @@ internal static partial class ProxyPipeExtensions
 
         if (messageLength > context.Options.MaxReceiveMessageSize)
         {
-            throw new RpcException(ReceivedMessageExceedsLimitStatus);
+            throw new InvalidOperationException(ReceivedMessageExceedsLimitStatus.Detail);
         }
 
         if (buffer.Length < HeaderSize + messageLength)
@@ -229,11 +310,11 @@ internal static partial class ProxyPipeExtensions
             var encoding = GetGrpcEncoding(context, direction);
             if (encoding == null)
             {
-                throw new RpcException(NoMessageEncodingMessageStatus);
+                throw new InvalidOperationException(NoMessageEncodingMessageStatus.Detail);
             }
             if (GrpcProtocolConstants.IsGrpcEncodingIdentity(encoding))
             {
-                throw new RpcException(IdentityMessageEncodingMessageStatus);
+                throw new InvalidOperationException(IdentityMessageEncodingMessageStatus.Detail);
             }
 
             // Performance improvement would be to decompress without converting to an intermediary byte array
@@ -247,7 +328,7 @@ internal static partial class ProxyPipeExtensions
                 supportedEncodings.Add(GrpcProtocolConstants.IdentityGrpcEncoding);
                 supportedEncodings.AddRange(context.Options.CompressionProviders.Select(p => p.Key));
 
-                throw new RpcException(CreateUnknownMessageEncodingMessageStatus(encoding, supportedEncodings));
+                throw new InvalidOperationException(CreateUnknownMessageEncodingMessageStatus(encoding, supportedEncodings).Detail);
             }
 
             message = decompressedMessage;
