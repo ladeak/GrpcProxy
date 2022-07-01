@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApplication1", "samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrpcProxy.Tests", "GrpcProxy.Tests\GrpcProxy.Tests.csproj", "{7F59F30B-7682-4969-A6F1-179A96E7B970}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrpcProxy.Benchmarks", "GrpcProxy.Benchmarks\GrpcProxy.Benchmarks.csproj", "{80D1DDC7-9C86-4E85-A946-1C2AE0CA2687}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{7F59F30B-7682-4969-A6F1-179A96E7B970}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F59F30B-7682-4969-A6F1-179A96E7B970}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F59F30B-7682-4969-A6F1-179A96E7B970}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80D1DDC7-9C86-4E85-A946-1C2AE0CA2687}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80D1DDC7-9C86-4E85-A946-1C2AE0CA2687}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80D1DDC7-9C86-4E85-A946-1C2AE0CA2687}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80D1DDC7-9C86-4E85-A946-1C2AE0CA2687}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
