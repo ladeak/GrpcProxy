@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "samples\Cons
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApplication1", "samples\WebApplication1\WebApplication1.csproj", "{328C8777-9312-4E20-A6F5-233C32B34BF4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrpcProxy.Tests", "GrpcProxy.Tests\GrpcProxy.Tests.csproj", "{E5B994F8-C381-4F13-B8DE-A32D0DF0BC20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrpcProxy.Tests", "tests\GrpcProxy.Tests\GrpcProxy.Tests.csproj", "{E5B994F8-C381-4F13-B8DE-A32D0DF0BC20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
