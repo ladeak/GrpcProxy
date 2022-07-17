@@ -14,15 +14,15 @@ internal static partial class ProxyPipeExtensions
     private const int MessageDelimiterSize = 4; // how many bytes it takes to encode "Message-Length"
     private const int HeaderSize = MessageDelimiterSize + 1; // message length + compression flag
 
-    private static readonly Status MessageCancelledStatus = new Status(StatusCode.Internal, "Incoming message cancelled.");
-    private static readonly Status AdditionalDataStatus = new Status(StatusCode.Internal, "Additional data after the message received.");
-    private static readonly Status IncompleteMessageStatus = new Status(StatusCode.Internal, "Incomplete message.");
-    private static readonly Status ReceivedMessageExceedsLimitStatus = new Status(StatusCode.ResourceExhausted, "Received message exceeds the maximum configured message size.");
-    private static readonly Status NoMessageEncodingMessageStatus = new Status(StatusCode.Internal, "Request did not include grpc-encoding value with compressed message.");
-    private static readonly Status IdentityMessageEncodingMessageStatus = new Status(StatusCode.Internal, "Request sent 'identity' grpc-encoding value with compressed message.");
-    private static Status CreateUnknownMessageEncodingMessageStatus(string unsupportedEncoding, IEnumerable<string> supportedEncodings)
+    private static readonly string MessageCancelledStatus = "Incoming message cancelled.";
+    private static readonly string AdditionalDataStatus = "Additional data after the message received.";
+    private static readonly string IncompleteMessageStatus = "Incomplete message.";
+    private static readonly string ReceivedMessageExceedsLimitStatus =  "Received message exceeds the maximum configured message size.";
+    private static readonly string NoMessageEncodingMessageStatus = "Request did not include grpc-encoding value with compressed message.";
+    private static readonly string IdentityMessageEncodingMessageStatus = "Request sent 'identity' grpc-encoding value with compressed message.";
+    private static string CreateUnknownMessageEncodingMessageStatus(string unsupportedEncoding, IEnumerable<string> supportedEncodings)
     {
-        return new Status(StatusCode.Unimplemented, $"Unsupported grpc-encoding value '{unsupportedEncoding}'. Supported encodings: {string.Join(", ", supportedEncodings)}");
+        return $"Unsupported grpc-encoding value '{unsupportedEncoding}'. Supported encodings: {string.Join(", ", supportedEncodings)}";
     }
 
     private static int DecodeMessageLength(ReadOnlySpan<byte> buffer)
@@ -212,7 +212,7 @@ internal static partial class ProxyPipeExtensions
 
         if (messageLength > context.Options.MaxReceiveMessageSize)
         {
-            throw new RpcException(ReceivedMessageExceedsLimitStatus);
+            throw new InvalidOperationException(ReceivedMessageExceedsLimitStatus);
         }
 
         if (buffer.Length < HeaderSize + messageLength)
@@ -229,11 +229,11 @@ internal static partial class ProxyPipeExtensions
             var encoding = GetGrpcEncoding(context, direction);
             if (encoding == null)
             {
-                throw new RpcException(NoMessageEncodingMessageStatus);
+                throw new InvalidOperationException(NoMessageEncodingMessageStatus);
             }
             if (GrpcProtocolConstants.IsGrpcEncodingIdentity(encoding))
             {
-                throw new RpcException(IdentityMessageEncodingMessageStatus);
+                throw new InvalidOperationException(IdentityMessageEncodingMessageStatus);
             }
 
             // Performance improvement would be to decompress without converting to an intermediary byte array
@@ -247,7 +247,7 @@ internal static partial class ProxyPipeExtensions
                 supportedEncodings.Add(GrpcProtocolConstants.IdentityGrpcEncoding);
                 supportedEncodings.AddRange(context.Options.CompressionProviders.Select(p => p.Key));
 
-                throw new RpcException(CreateUnknownMessageEncodingMessageStatus(encoding, supportedEncodings));
+                throw new InvalidOperationException(CreateUnknownMessageEncodingMessageStatus(encoding, supportedEncodings));
             }
 
             message = decompressedMessage;
