@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace GrpcProxy.Tests;
 
-internal static class HttpContextServerCallContextHelper
+internal static class ProxyHttpContextServerCallContextHelper
 {
     public static ProxyHttpContextServerCallContext CreateServerCallContext(
         HttpContext? httpContext = null,

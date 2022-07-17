@@ -40,7 +40,7 @@ public class PipeExtensionsTests
         var pipeReader = PipeReader.Create(ms);
 
         // Act
-        var messageData = await pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
+        var messageData = await pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
 
         // Assert
         Assert.Equal(0, messageData.Span.Length);
@@ -63,7 +63,7 @@ public class PipeExtensionsTests
         var pipeReader = PipeReader.Create(ms);
 
         // Act
-        var messageData = await pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
+        var messageData = await pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
 
         // Assert
         Assert.Equal(1, messageData.Span.Length);
@@ -74,7 +74,7 @@ public class PipeExtensionsTests
     public async Task ReadSingleMessageAsync_UnderReceiveSize_ReturnData()
     {
         // Arrange
-        var context = HttpContextServerCallContextHelper.CreateServerCallContext(maxSendMessageSize: 1);
+        var context = ProxyHttpContextServerCallContextHelper.CreateServerCallContext(maxSendMessageSize: 1);
         var ms = new MemoryStream(new byte[]
             {
                 0x00, // compression = 0
@@ -98,7 +98,7 @@ public class PipeExtensionsTests
     public async Task ReadSingleMessageAsync_ExceedReceiveSize_ReturnData()
     {
         // Arrange
-        var context = HttpContextServerCallContextHelper.CreateServerCallContext(maxReceiveMessageSize: 1);
+        var context = ProxyHttpContextServerCallContextHelper.CreateServerCallContext(maxReceiveMessageSize: 1);
         var ms = new MemoryStream(new byte[]
             {
                 0x00, // compression = 0
@@ -140,7 +140,7 @@ public class PipeExtensionsTests
         var pipeReader = PipeReader.Create(ms);
 
         // Act
-        var messageData = await pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
+        var messageData = await pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
 
         // Assert
         Assert.Equal(449, messageData.Span.Length);
@@ -162,7 +162,7 @@ public class PipeExtensionsTests
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
+            () => pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class PipeExtensionsTests
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
+            () => pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
 
     }
 
@@ -206,7 +206,7 @@ public class PipeExtensionsTests
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
+            () => pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
 
     }
 
@@ -215,16 +215,15 @@ public class PipeExtensionsTests
     {
         // Arrange
         var pipe = new Pipe();
-
-        var pipeReader = pipe.Reader;
+        var pipeReader = new SyncPipeReader(pipe.Reader);
+        var pipeWriter = new SyncPipeWriter(pipe.Writer, pipeReader);
 
         // Act
-        var readTask = pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
+        var readTask = pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
 
         // Assert
         Assert.False(readTask.IsCompleted, "Still waiting for data");
-
-        await pipe.Writer.WriteAsync(new byte[]
+        await pipeWriter.WaitReadAndWriteAsync(new byte[]
             {
                 0x00, // compression = 0
                 0x00,
@@ -234,54 +233,52 @@ public class PipeExtensionsTests
                 0x10
             });
 
-        //Assert.False(readTask.IsCompleted, "Still waiting for data");
+        Assert.False(readTask.IsCompleted, "Still waiting for data");
 
-        //await pipe.Writer.WriteAsync(new byte[] { 0x00 });
-        //await pipe.Writer.CompleteAsync();
+        await pipeWriter.WaitReadAndWriteAsync(new byte[] { 0x00 });
+        await pipeWriter.CompleteAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => readTask).WaitAsync(TimeSpan.FromSeconds(30));
     }
 
-    //[Fact]
-    //public async Task ReadSingleMessageAsync_MessageInMultiplePipeReads_ReadMessageData()
-    //{
-    //    // Arrange
-    //    var messageData = new byte[]
-    //        {
-    //            0x00, // compression = 0
-    //            0x00,
-    //            0x00,
-    //            0x00,
-    //            0x01, // length = 1
-    //            0x10
-    //        };
+    [Fact]
+    public async Task ReadSingleMessageAsync_MessageInMultiplePipeReads_ReadMessageData()
+    {
+        // Arrange
+        var pipe = new Pipe();
+        var pipeReader = new SyncPipeReader(pipe.Reader);
+        var pipeWriter = new SyncPipeWriter(pipe.Writer, pipeReader);
 
-    //    // Run continuations without async so ReadSingleMessageAsync immediately consumes added data
-    //    var requestStream = new SyncPointMemoryStream(runContinuationsAsynchronously: false);
+        var messageData = new byte[]
+            {
+                0x00, // compression = 0
+                0x00,
+                0x00,
+                0x00,
+                0x01, // length = 1
+                0x10
+            };
 
-    //    var pipeReader = PipeReader.Create(requestStream);
+        // Act
+        var readTask = pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
 
-    //    // Act
-    //    var readTask = pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request);
+        // Assert
+        for (var i = 0; i < messageData.Length; i++)
+        {
+            var b = messageData[i];
 
-    //    // Assert
-    //    for (var i = 0; i < messageData.Length; i++)
-    //    {
-    //        var b = messageData[i];
-    //        var isLast = i == messageData.Length - 1;
+            Assert.False(readTask.IsCompleted, "Still waiting for data");
 
-    //        Assert.False(readTask.IsCompleted, "Still waiting for data");
+            await pipeWriter.WaitReadAndWriteAsync(new[] { b });
+        }
 
-    //        await requestStream.AddDataAndWait(new[] { b }).WaitAsync(TimeSpan.FromSeconds(30));
-    //    }
+        await pipe.Writer.CompleteAsync();
 
-    //    await requestStream.AddDataAndWait(Array.Empty<byte>()).WaitAsync(TimeSpan.FromSeconds(30));
+        var readMessageData = await readTask.WaitAsync(TimeSpan.FromSeconds(30));
 
-    //    var readMessageData = await readTask.WaitAsync(TimeSpan.FromSeconds(30));
-
-    //    // Assert
-    //    Assert.Equal(new byte[] { 0x10 }, readMessageData.Span.ToArray());
-    //}
+        // Assert
+        Assert.Equal(new byte[] { 0x10 }, readMessageData.Span.ToArray());
+    }
 
     [Fact]
     public async Task ReadMessageStreamAsync_HeaderIncomplete_ThrowError()
@@ -298,7 +295,7 @@ public class PipeExtensionsTests
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => pipeReader.ReadSingleMessageAsync(HttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
+            () => pipeReader.ReadSingleMessageAsync(ProxyHttpContextServerCallContextHelper.CreateServerCallContext(), TestDataMarshaller.ContextualDeserializer, MessageDirection.Request)).WaitAsync(TimeSpan.FromSeconds(30));
 
     }
 
