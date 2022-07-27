@@ -19,7 +19,7 @@ namespace GrpcProxy.Grpc.CallHandlers
             Method<TRequest, TResponse> method,
             IHttpClientFactory httpClientFactory,
             IProxyMessageMediator messageMediator,
-            string serviceAddress) : base(options, method)
+            string serviceAddress) : base(options, method, messageMediator)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _messageMediator = messageMediator;
@@ -31,56 +31,55 @@ namespace GrpcProxy.Grpc.CallHandlers
         protected override async Task HandleCallAsyncCore(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             BodySizeFeatureHelper.DisableMinRequestBodyDataRateAndMaxRequestBodySize(httpContext);
-            var proxyCallId = Guid.NewGuid();
-            var sending = await ForwardRequestAsync(proxyCallId, httpContext, serverCallContext);
-            await ForwardResponseAsync(proxyCallId, sending, httpContext, serverCallContext);
+            var sending = await ForwardRequestAsync(httpContext, serverCallContext);
+            await ForwardResponseAsync(sending, httpContext, serverCallContext);
         }
 
-        private async Task<ForwardingContext> ForwardRequestAsync(Guid proxyCallId, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
+        private async Task<ForwardingContext> ForwardRequestAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             try
             {
                 var sendingTask = _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, serverCallContext);
-                var deserializationTask = DeserializeRequestAsync(httpContext, serverCallContext, proxyCallId);
+                var deserializationTask = DeserializeRequestAsync(httpContext, serverCallContext);
                 await Task.WhenAll(sendingTask, deserializationTask);
                 return sendingTask.Result;
             }
             catch (OperationCanceledException)
             {
-                await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
+                await _messageMediator.AddCancellationAsync(httpContext, serverCallContext.ProxyCallId, _method.Type);
                 throw;
             }
         }
 
-        private async Task ForwardResponseAsync(Guid proxyCallId, ForwardingContext sending, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
+        private async Task ForwardResponseAsync(ForwardingContext sending, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             try
             {
                 var responseTask = _httpForwarder.ReturnResponseAsync(httpContext, sending.StreamCopyContent, HttpTransformer.Empty, serverCallContext);
-                var deserializationTask = DeserializingResponseAsync(proxyCallId, sending, httpContext, serverCallContext);
+                var deserializationTask = DeserializingResponseAsync(sending, httpContext, serverCallContext);
                 await Task.WhenAll(responseTask, deserializationTask);
             }
             catch (OperationCanceledException)
             {
-                await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
+                await _messageMediator.AddCancellationAsync(httpContext, serverCallContext.ProxyCallId, _method.Type);
                 throw;
             }
         }
 
-        private async Task DeserializeRequestAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId)
+        private async Task DeserializeRequestAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             var requestData = await serverCallContext.RequestPipe.Reader.ReadSingleMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Request);
-            await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, requestData?.ToString() ?? string.Empty);
+            await _messageMediator.AddRequestAsync(httpContext, serverCallContext.ProxyCallId, _method.Type, requestData?.ToString() ?? string.Empty);
         }
 
-        private async Task DeserializingResponseAsync(Guid proxyCallId, ForwardingContext sending, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
+        private async Task DeserializingResponseAsync(ForwardingContext sending, HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             while (!serverCallContext.CancellationToken.IsCancellationRequested)
             {
                 var message = await serverCallContext.ResponsePipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Response, serverCallContext.CancellationToken);
                 if (message == null)
                     break;
-                await _messageMediator.AddResponseAsync(sending.ResponseMessage, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, message?.ToString() ?? string.Empty);
+                await _messageMediator.AddResponseAsync(sending.ResponseMessage, _serviceAddress, serverCallContext.ProxyCallId, httpContext.Request.Path, _method.Type, message?.ToString() ?? string.Empty);
             }
         }
     }

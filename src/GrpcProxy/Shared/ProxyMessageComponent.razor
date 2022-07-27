@@ -13,7 +13,8 @@
 			@if (!Message.IsCancelled)
 			{
 				<b>Content:</b> @Message.Message
-			}else
+			}
+			else
 			{
 				<text>Cancelled</text>
 			}
@@ -49,7 +50,13 @@
 		{
 			if (Message == null || Message.IsCancelled)
 				return "Client";
-			return Message.Direction == MessageDirection.Request ? "Client" : "Server";
+			return Message.Direction switch
+			{
+				MessageDirection.Request => "Request",
+				MessageDirection.Response => "Response",
+				MessageDirection.None => "Proxy Error",
+				_ => throw new NotImplementedException()
+			};
 		}
 	}
 
@@ -59,7 +66,13 @@
 		{
 			if (Message == null || Message.IsCancelled)
 				return "bg-danger";
-			return Message.Direction == MessageDirection.Request ? "bg-primary" : "bg-warning text-dark";
+			return Message.Direction switch
+			{
+				MessageDirection.Request => "bg-info",
+				MessageDirection.Response => "bg-warning text-dark",
+				MessageDirection.None => "bg-danger text-dark",
+				_ => throw new NotImplementedException()
+			};
 		}
 	}
 

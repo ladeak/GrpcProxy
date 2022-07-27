@@ -19,7 +19,7 @@ namespace GrpcProxy.Grpc.CallHandlers
             Method<TRequest, TResponse> method,
             IHttpClientFactory httpClientFactory,
             IProxyMessageMediator messageMediator,
-            string serviceAddress) : base(options, method)
+            string serviceAddress) : base(options, method, messageMediator)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _messageMediator = messageMediator;
@@ -31,14 +31,13 @@ namespace GrpcProxy.Grpc.CallHandlers
         protected override async Task HandleCallAsyncCore(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             BodySizeFeatureHelper.DisableMinRequestBodyDataRateAndMaxRequestBodySize(httpContext);
-            var proxyCallId = Guid.NewGuid();
             try
             {
                 var sending = await _httpForwarder.SendRequestAsync(httpContext, _serviceAddress, _httpClientFactory.CreateClient(), HttpTransformer.Empty, serverCallContext);
-                var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext, proxyCallId);
+                var deserializingRequestTask = DeserializingRequestsAsync(httpContext, serverCallContext);
 
                 var returningResponseTask = _httpForwarder.ReturnResponseAsync(httpContext, sending.StreamCopyContent, HttpTransformer.Empty, serverCallContext);
-                var deserializingResponseTask = DeserializingResponseAsync(httpContext, serverCallContext, proxyCallId, sending.ResponseMessage);
+                var deserializingResponseTask = DeserializingResponseAsync(httpContext, serverCallContext, sending.ResponseMessage);
 
                 await deserializingRequestTask;
                 await deserializingResponseTask;
@@ -46,30 +45,30 @@ namespace GrpcProxy.Grpc.CallHandlers
             }
             catch (OperationCanceledException)
             {
-                await _messageMediator.AddCancellationAsync(httpContext, proxyCallId, _method.Type);
+                await _messageMediator.AddCancellationAsync(httpContext,  serverCallContext.ProxyCallId, _method.Type);
                 throw;
             }
         }
 
-        private async ValueTask DeserializingRequestsAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId)
+        private async ValueTask DeserializingRequestsAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext)
         {
             while (!serverCallContext.CancellationToken.IsCancellationRequested)
             {
                 var message = await serverCallContext.RequestPipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.RequestMarshaller.ContextualDeserializer, MessageDirection.Request, CancellationToken.None);
                 if (message == null)
                     break;
-                await _messageMediator.AddRequestAsync(httpContext, proxyCallId, _method.Type, message?.ToString() ?? string.Empty);
+                await _messageMediator.AddRequestAsync(httpContext, serverCallContext.ProxyCallId, _method.Type, message?.ToString() ?? string.Empty);
             }
         }
 
-        private async ValueTask DeserializingResponseAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, Guid proxyCallId, HttpResponseMessage response)
+        private async ValueTask DeserializingResponseAsync(HttpContext httpContext, ProxyHttpContextServerCallContext serverCallContext, HttpResponseMessage response)
         {
             while (!serverCallContext.CancellationToken.IsCancellationRequested)
             {
                 var message = await serverCallContext.ResponsePipe.Reader.ReadStreamMessageAsync(serverCallContext, _method.ResponseMarshaller.ContextualDeserializer, MessageDirection.Response, CancellationToken.None);
                 if (message == null)
                     break;
-                await _messageMediator.AddResponseAsync(response, _serviceAddress, proxyCallId, httpContext.Request.Path, _method.Type, message?.ToString() ?? string.Empty);
+                await _messageMediator.AddResponseAsync(response, _serviceAddress, serverCallContext.ProxyCallId, httpContext.Request.Path, _method.Type, message?.ToString() ?? string.Empty);
             }
         }
     }

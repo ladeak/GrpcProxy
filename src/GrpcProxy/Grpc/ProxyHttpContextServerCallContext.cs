@@ -32,6 +32,7 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
         Options = options;
         RequestType = requestType;
         ResponseType = responseType;
+        ProxyCallId = Guid.NewGuid();
     }
 
     internal HttpContext HttpContext { get; }
@@ -80,6 +81,8 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         get => _responsePipe ??= new Pipe();
     }
+
+    internal Guid ProxyCallId { get; }
 
     internal HttpResponseMessage? ProxiedResponseMessage
     {
@@ -176,6 +179,8 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
     {
         if (ex is RpcException rpcException)
         {
+            Debug.Assert(false, "No RpcException shall be thrown by the proxy.");
+
             // RpcException is thrown by client code to modify the status returned from the server.
 
             // There are two sources of metadata entries on the server-side:
@@ -193,6 +198,10 @@ internal sealed class ProxyHttpContextServerCallContext : ServerCallContext, ISe
         if (ex is OperationCanceledException)
         {
             _status = Status.DefaultCancelled;
+        }
+        if (ex is InvalidOperationException)
+        {
+            _status = new Status(StatusCode.Internal, CommonGrpcProtocolHelpers.ConvertToRpcExceptionMessage(ex), ex);
         }
         else
         {

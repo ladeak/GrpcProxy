@@ -19,7 +19,7 @@ namespace GrpcProxy.Grpc.CallHandlers
             Method<TRequest, TResponse> method,
             IHttpClientFactory httpClientFactory,
             IProxyMessageMediator messageMediator,
-            string serviceAddress) : base(options, method)
+            string serviceAddress) : base(options, method, messageMediator)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _messageMediator = messageMediator;

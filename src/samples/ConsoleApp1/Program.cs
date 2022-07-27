@@ -64,7 +64,7 @@ class Program
         await streamOfWork.RequestStream.CompleteAsync();
     }
 
-    private const int Timeout = 300;
+    private const int Timeout = 30000;
 
     private static async Task DuplexStreamingAsync(SuperService.SuperServiceClient client)
     {

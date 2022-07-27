@@ -13,11 +13,13 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
     private const string LoggerName = nameof(ProxyServerCallHandlerBase<TRequest, TResponse>);
     protected readonly MethodOptions _options;
     protected readonly Method<TRequest, TResponse> _method;
+    private readonly IProxyMessageMediator _messageMediator;
 
-    protected ProxyServerCallHandlerBase(MethodOptions options, Method<TRequest, TResponse> method)
+    protected ProxyServerCallHandlerBase(MethodOptions options, Method<TRequest, TResponse> method, IProxyMessageMediator messageMediator)
     {
         _options = options;
         _method = method;
+        _messageMediator = messageMediator;
     }
 
     public Task HandleCallAsync(HttpContext httpContext)
@@ -37,14 +39,14 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
         {
             serverCallContext.Initialize();
             var handleCallTask = HandleCallAsyncCore(httpContext, serverCallContext);
-            return AwaitHandleCall(serverCallContext, handleCallTask);
+            return AwaitHandleCall(serverCallContext, handleCallTask, _messageMediator, httpContext, _method.Type);
         }
         catch (Exception ex)
         {
             return serverCallContext.ProcessHandlerErrorAsync(ex, "Unable to proxy");
         }
 
-        static async Task AwaitHandleCall(ProxyHttpContextServerCallContext serverCallContext, Task handleCall)
+        static async Task AwaitHandleCall(ProxyHttpContextServerCallContext serverCallContext, Task handleCall, IProxyMessageMediator messageMediator, HttpContext httpContext, MethodType type)
         {
             try
             {
@@ -53,6 +55,8 @@ internal abstract class ProxyServerCallHandlerBase<TRequest, TResponse>
             }
             catch (Exception ex)
             {
+                if (ex is InvalidOperationException invalidOp)
+                    await messageMediator.AddErrorAsync(httpContext, serverCallContext.ProxyCallId, invalidOp, type);
                 await serverCallContext.ProcessHandlerErrorAsync(ex, "Unable to proxy request");
             }
         }

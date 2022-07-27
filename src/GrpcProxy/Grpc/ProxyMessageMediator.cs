@@ -52,9 +52,35 @@ public class ProxyMessageMediator : IProxyMessageMediator
             IsCancelled: true);
         return _channel.Writer.WriteAsync(message);
     }
+
+    public ValueTask AddErrorAsync(HttpContext context, Guid proxyCallId, Exception exception, MethodType methodType)
+    {
+        var message = new ProxyMessage(
+            proxyCallId,
+            MessageDirection.None,
+            DateTime.UtcNow,
+            $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}",
+            new List<string>(),
+            context.Request.Path,
+            string.Empty,
+            methodType.ToString(),
+            false,
+            StatusCode: null,
+            ProxyError: exception);
+        return _channel.Writer.WriteAsync(message);
+    }
 }
 
-public record ProxyMessage(Guid ProxyCallId, MessageDirection Direction, DateTime Timestamp, string Endpoint, List<string> Headers, string Path, string Message, string MethodType, bool IsCancelled, HttpStatusCode? StatusCode = null)
+public record ProxyMessage(Guid ProxyCallId,
+    MessageDirection Direction,
+    DateTime Timestamp,
+    string Endpoint,
+    List<string> Headers,
+    string Path, string Message,
+    string MethodType,
+    bool IsCancelled,
+    HttpStatusCode? StatusCode = null, 
+    Exception? ProxyError = null)
 {
     public bool Contains(string text)
     {
@@ -66,12 +92,15 @@ public record ProxyMessage(Guid ProxyCallId, MessageDirection Direction, DateTim
             || MethodType == text
             || (text == "Request" && Direction == MessageDirection.Request)
             || (text == "Response" && Direction == MessageDirection.Response)
-            || Message.Contains(text);
+            || (text == "Proxy Error" && Direction == MessageDirection.None)
+            || Message.Contains(text)
+            || (ProxyError?.Message.Contains(text) ?? false);
     }
 }
 
 public enum MessageDirection
 {
+    None = 0,
     Request = 1,
     Response = 2
 }

@@ -7,7 +7,7 @@ namespace Service
     public class SuperServiceImpl : SuperService.SuperServiceBase
     {
         private static readonly DiagnosticListener _diagnostics = new DiagnosticListener(nameof(Service));
-        private const int WorkDuration = 10000;
+        private const int WorkDuration = 100;
 
         public override async Task<ResponseData> DoWork(RequestData request, ServerCallContext context)
         {

@@ -24,9 +24,11 @@ public class LogsPublisher : IHostedService
         if (e == null)
             return;
         if (e.Direction == MessageDirection.Request)
-            PulisherLogger.RequestMessage(_logger, e);
+            PublisherLogger.RequestMessage(_logger, e);
+        else if (e.Direction == MessageDirection.Response)
+            PublisherLogger.ResponseMessage(_logger, e);
         else
-            PulisherLogger.ResponseMessage(_logger, e);
+            PublisherLogger.ProxyErrorMessage(_logger, e);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
