@@ -5,19 +5,19 @@ namespace GrpcProxy.Visualizer;
 public class MessageDispatcher : BackgroundService
 {
     private readonly IProxyMessageMediator _mediator;
-    private readonly IMessageRepository _repository;
+    private readonly IEnumerable<IMessageRepositoryIngress> _repositories;
 
-    public MessageDispatcher(IProxyMessageMediator mediator, IMessageRepository repository)
+    public MessageDispatcher(IProxyMessageMediator mediator, IEnumerable<IMessageRepositoryIngress> repositories)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _repositories = repositories ?? throw new ArgumentNullException(nameof(repositories));
     }
 
     protected override async Task ExecuteAsync(CancellationToken token)
     {
         await foreach (var item in _mediator.ChannelReader.ReadAllAsync(token))
         {
-            await _repository.AddAsync(item);
+            await Task.WhenAll(_repositories.Select(x => x.AddAsync(item)));
         }
     }
 }

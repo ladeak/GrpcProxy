@@ -2,7 +2,7 @@
 @using GrpcProxy.Visualizer
 @using GrpcProxy.Grpc
 @using System.Collections.Immutable
-@inject IMessageRepository _messageRepo
+@inject ILimitedMessageRepository _messageRepo
 @implements IDisposable
 
 <PageTitle>Index</PageTitle>
@@ -17,7 +17,7 @@
 			<input type="text" class="form-control" style="max-width: 150px" placeholder="search..." aria-label="search..." aria-describedby="basic-addon1" @bind-value="SearchText">
 		</div>
 	</div>
-	<Virtualize Context=item Items="Messages">
+	<Virtualize Context=item Items="Messages" TItem="ProxyMessage">
 		<ProxyMessageComponent Message=@item></ProxyMessageComponent>
 	</Virtualize>
 </div>

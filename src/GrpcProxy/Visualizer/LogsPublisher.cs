@@ -4,10 +4,10 @@ namespace GrpcProxy.Visualizer;
 
 public class LogsPublisher : IHostedService
 {
-    private readonly IMessageRepository _repository;
+    private readonly ILimitedMessageRepository _repository;
     private readonly ILogger<LogsPublisher> _logger;
 
-    public LogsPublisher(IMessageRepository repository, ILogger<LogsPublisher> logger)
+    public LogsPublisher(ILimitedMessageRepository repository, ILogger<LogsPublisher> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));

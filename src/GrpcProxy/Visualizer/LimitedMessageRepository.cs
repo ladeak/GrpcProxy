@@ -3,26 +3,32 @@ using GrpcProxy.Grpc;
 
 namespace GrpcProxy.Visualizer;
 
-public class MessageRepository : IMessageRepository
+public interface ILimitedMessageRepository : IMessageRepository<ProxyMessage>
+{
+}
+
+public class LimitedMessageRepository : ILimitedMessageRepository
 {
     private const int MaxSize = 1000;
     public event EventHandler<ProxyMessage>? OnMessage;
 
-    public ImmutableArray<ProxyMessage> Messages { get; private set; } = ImmutableArray<ProxyMessage>.Empty;
+    private ImmutableArray<ProxyMessage> _messages = ImmutableArray<ProxyMessage>.Empty;
+
+    public ICollection<ProxyMessage> Messages => _messages;
 
     public Task AddAsync(ProxyMessage item)
     {
-        var temp = Messages.Insert(0, item);
+        var temp = _messages.Insert(0, item);
         if (temp.Length > MaxSize)
             temp = temp.RemoveAt(MaxSize);
-        Messages = temp;
+        _messages = temp;
         OnMessage?.Invoke(this, item);
         return Task.CompletedTask;
     }
 
     public void Clear()
     {
-        Messages = ImmutableArray<ProxyMessage>.Empty;
+        _messages = ImmutableArray<ProxyMessage>.Empty;
         OnMessage?.Invoke(this, null!);
     }
 }
