@@ -23,7 +23,7 @@ public static partial class ProxyGrpcServiceExtensions
 
         builder.Services.TryAddSingleton(typeof(ProxyServiceMethodsRegistry));
         builder.Services.AddHttpClient();
-        builder.Services.AddHostedService<MessageDispatcher>();
+        builder.Services.AddHostedService<MessageMultiplexer>();
         builder.Services.AddHostedService<LogsPublisher>();
         return builder;
     }
