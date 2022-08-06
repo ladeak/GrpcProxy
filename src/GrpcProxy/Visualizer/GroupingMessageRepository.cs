@@ -15,6 +15,8 @@ public class GroupingMessageRepository : IGroupingMessageRepository
 
     public static int MaxSize { get; } = 1000;
 
+    public bool IsPaused { get; private set; }
+
     public ICollection<ProxyMessageChain> Messages
     {
         get
@@ -31,6 +33,9 @@ public class GroupingMessageRepository : IGroupingMessageRepository
 
     public Task AddAsync(ProxyMessage item)
     {
+        if (IsPaused)
+            return Task.CompletedTask;
+
         var temp = _chains;
         var chain = temp.Find(x => x.Id == item.ProxyCallId);
         temp = temp.Remove(chain);
@@ -58,5 +63,15 @@ public class GroupingMessageRepository : IGroupingMessageRepository
     {
         _chains = _chains.Clear();
         OnMessage?.Invoke(this, new ProxyMessageChain(Guid.Empty, string.Empty, ImmutableArray<ProxyMessage>.Empty));
+    }
+
+    public void Pause()
+    {
+        IsPaused = true;
+    }
+
+    public void Resume()
+    {
+        IsPaused = false;
     }
 }

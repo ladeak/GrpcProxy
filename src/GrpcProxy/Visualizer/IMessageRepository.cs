@@ -21,6 +21,11 @@ public interface IMessageRepository<TMessage> : IMessageRepositoryIngress
     public ICollection<TMessage> Messages { get; }
 
     /// <summary>
+    /// Returns if the current repository has paused processing messages.
+    /// </summary>
+    public bool IsPaused { get; }
+
+    /// <summary>
     /// This event is fired when a new message is available in the repository.
     /// </summary>
     public event EventHandler<TMessage> OnMessage;
@@ -29,4 +34,14 @@ public interface IMessageRepository<TMessage> : IMessageRepositoryIngress
     /// Remove all messages from the repository.
     /// </summary>
     public void Clear();
+
+    /// <summary>
+    /// Pauses message processing
+    /// </summary>
+    public void Pause();
+
+    /// <summary>
+    /// Resumes message processing
+    /// </summary>
+    public void Resume();
 }

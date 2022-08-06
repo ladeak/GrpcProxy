@@ -9,6 +9,9 @@
 		<div class="col-md-auto">
 			<Button class="col btn btn-primary btn-sm" type="button" @onclick="ClearMessages">Clear</Button>
 		</div>
+		<div class="col-md-auto">
+			<Button class="col btn btn-primary btn-sm" type="button" @onclick="TogglePause">@TogglePauseText</Button>
+		</div>
 		<div class="col input-group input-group-sm" style="max-width: 150px">
 			<span class="input-group-text" id="basic-addon1">$</span>
 			<input type="text" class="form-control" placeholder="search..." aria-label="search..." aria-describedby="basic-addon1" @bind-value="SearchText">
@@ -21,6 +24,10 @@
 
 @code
 {
+	private const string Pause = nameof(Pause);
+
+	private const string Resume = nameof(Resume);
+
 	[CascadingParameter]
 	public ICollection<TMessage> Messages { get; private set; } = new List<TMessage>();
 
@@ -41,11 +48,14 @@
 		}
 	}
 
+	public string TogglePauseText { get; set; }
+
 	protected override Task OnInitializedAsync()
 	{
 		SearchText = string.Empty;
 		Repository.OnMessage += HandleMessage;
 		Messages = Repository.Messages;
+		TogglePauseText = Repository.IsPaused ? Resume : Pause;
 		return base.OnInitializedAsync();
 	}
 
@@ -63,6 +73,20 @@
 	public async void HandleMessage(object? sender, TMessage eventData)
 	{
 		await InvokeAsync(() => SearchUpdate());
+	}
+
+	public void TogglePause()
+	{
+		if (TogglePauseText == Pause)
+		{
+			TogglePauseText = Resume;
+			Repository.Pause();
+		}
+		else
+		{
+			TogglePauseText = Pause;
+			Repository.Resume();
+		}
 	}
 
 	public void Dispose()

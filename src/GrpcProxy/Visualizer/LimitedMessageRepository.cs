@@ -16,8 +16,13 @@ public class LimitedMessageRepository : ILimitedMessageRepository
 
     public ICollection<ProxyMessage> Messages => _messages;
 
+    public bool IsPaused { get; private set; }
+
     public Task AddAsync(ProxyMessage item)
     {
+        if (IsPaused)
+            return Task.CompletedTask;
+
         var temp = _messages.Insert(0, item);
         if (temp.Length > MaxSize)
             temp = temp.RemoveAt(MaxSize);
@@ -30,5 +35,15 @@ public class LimitedMessageRepository : ILimitedMessageRepository
     {
         _messages = ImmutableArray<ProxyMessage>.Empty;
         OnMessage?.Invoke(this, null!);
+    }
+
+    public void Pause()
+    {
+        IsPaused = true;
+    }
+
+    public void Resume()
+    {
+        IsPaused = false;
     }
 }
