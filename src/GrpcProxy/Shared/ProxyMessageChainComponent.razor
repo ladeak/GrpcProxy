@@ -1,93 +1,30 @@
-﻿@if (Message != null)
-{
-	<text>hello</text>
-	@*<div class="card" style="margin-bottom: 5px;">
-		<div class="card-header">
-			<div class="row">
-				<div class="col">@Message.Timestamp <span class="badge @BadgeColor">@Message.MethodType @Direction</span> <b>@SourceDisplay:</b> @Message.Endpoint <b>Path:</b> @Message.Path</div>
-				<div class="col-md-auto text-end"><Button class="btn btn-outline-info btn-sm" type="button" @onclick="ToggleDetails">Details</Button></div>
-			</div>
-		</div>
-		<div class="card-body">
-			@if (!Message.IsCancelled)
-			{
-				<b>Content:</b> @Message.Message
-			}
-			else
-			{
-				<text>Cancelled</text>
-			}
-			<br>
-			<div class="@Collapsible">
-				<b>ProxyId:</b> @Message.ProxyCallId<br>
-				@if (Message.StatusCode.HasValue)
-				{
-					<b>Status Code: </b> @Message.StatusCode.Value
+﻿@using GrpcProxy.Data
+@using System.Collections.Immutable
 
-					<br>
-				}
-				<b>Headers:</b><br>
-				<ul>
-					@foreach (var header in Message.Headers)
-					{
-						<li>@header</li>
-					}
-				</ul>
-			</div>
+<div class="card" style="margin-bottom: 5px; border-color: deepskyblue">
+	<div class="card-header" >
+		<div class="row">
+			<div class="col"> <b>ProxyId:</b> @Message.Id <b>Path:</b> @Message.Path</div>
+			<div class="col-md-auto text-end"><Button class="btn btn-outline-info btn-sm" type="button" @onclick="ToggleDetails">Show</Button></div>
 		</div>
-	</div>*@
-}
+	</div>
+	<div class="card-body @Collapsible">
+		<div>
+			@foreach (var message in Message.Chain)
+			{
+				<ProxyMessageSlimComponent Message="message" />
+			}
+		</div>
+	</div>
+</div>
 
 @code {
-
 	[Parameter]
-	public ProxyMessageChain? Message { get; set; }
+	public ProxyMessageChain Message { get; set; } = new ProxyMessageChain(Guid.Empty, string.Empty, ImmutableArray<ProxyMessage>.Empty);
 
-	//public string SourceDisplay
-	//{
-	//	get
-	//	{
-	//		if (Message == null || Message.IsCancelled)
-	//			return "Client";
-	//		return Message.Direction switch
-	//		{
-	//			MessageDirection.Request => "Request",
-	//			MessageDirection.Response => "Response",
-	//			MessageDirection.None => "Proxy Error",
-	//			_ => throw new NotImplementedException()
-	//		};
-	//	}
-	//}
+	private bool isCollapsed = true;
 
-	//public string BadgeColor
-	//{
-	//	get
-	//	{
-	//		if (Message == null || Message.IsCancelled)
-	//			return "bg-danger";
-	//		return Message.Direction switch
-	//		{
-	//			MessageDirection.Request => "bg-info",
-	//			MessageDirection.Response => "bg-warning text-dark",
-	//			MessageDirection.None => "bg-danger",
-	//			_ => throw new NotImplementedException()
-	//		};
-	//	}
-	//}
+	private string? Collapsible => isCollapsed ? "collapse" : null;
 
-	//public string Direction
-	//{
-	//	get
-	//	{
-	//		if (Message == null || Message.IsCancelled)
-	//			return "Cancelled";
-	//		return Message.Direction.ToString();
-	//	}
-	//}
-
-	//private bool isCollapsed = true;
-
-	//private string? Collapsible => isCollapsed ? "collapse" : null;
-
-	//private void ToggleDetails() => isCollapsed = !isCollapsed;
+	private void ToggleDetails() => isCollapsed = !isCollapsed;
 }

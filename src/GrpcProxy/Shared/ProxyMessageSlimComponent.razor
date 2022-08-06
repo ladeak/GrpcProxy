@@ -5,7 +5,7 @@
 	<div class="card" style="margin-bottom: 5px;">
 		<div class="card-header">
 			<div class="row">
-				<div class="col">@Message.Timestamp.ToString("HH:mm:ss.fff") <span class="badge @BadgeColor">@Message.MethodType @Direction</span> <b>@SourceDisplay:</b> @Message.Endpoint <b>Path:</b> @Message.Path</div>
+				<div class="col">@Message.Timestamp.ToString("HH:mm:ss.fff") <span class="badge @BadgeColor">@Message.MethodType @Direction</span> <b>@SourceDisplay:</b> @Message.Endpoint</div>
 				<div class="col-md-auto text-end"><Button class="btn btn-outline-info btn-sm" type="button" @onclick="ToggleDetails">Details</Button></div>
 			</div>
 		</div>
@@ -20,7 +20,6 @@
 			}
 			<br>
 			<div class="@Collapsible">
-				<b>ProxyId:</b> @Message.ProxyCallId<br>
 				@if (Message.StatusCode.HasValue)
 				{
 					<b>Status Code: </b> @Message.StatusCode.Value

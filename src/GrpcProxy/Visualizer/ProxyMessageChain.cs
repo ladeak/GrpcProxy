@@ -3,7 +3,7 @@ using GrpcProxy.Data;
 
 namespace GrpcProxy.Visualizer;
 
-public record struct ProxyMessageChain(Guid Id, ImmutableArray<ProxyMessage> Chain) : ISearchable
+public record struct ProxyMessageChain(Guid Id, string Path, ImmutableArray<ProxyMessage> Chain) : ISearchable
 {
     public bool Contains(string text)
     {

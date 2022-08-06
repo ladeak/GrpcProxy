@@ -42,7 +42,7 @@ public class GroupingMessageRepository : IGroupingMessageRepository
             currentChain = chain.Chain;
 
         currentChain = currentChain.Add(item);
-        chain = chain with { Id = item.ProxyCallId, Chain = currentChain };
+        chain = chain with { Id = item.ProxyCallId, Path = item.Path, Chain = currentChain };
 
         temp = temp.Insert(0, chain);
 
@@ -57,6 +57,6 @@ public class GroupingMessageRepository : IGroupingMessageRepository
     public void Clear()
     {
         _chains = _chains.Clear();
-        OnMessage?.Invoke(this, new ProxyMessageChain(Guid.Empty, ImmutableArray<ProxyMessage>.Empty));
+        OnMessage?.Invoke(this, new ProxyMessageChain(Guid.Empty, string.Empty, ImmutableArray<ProxyMessage>.Empty));
     }
 }
