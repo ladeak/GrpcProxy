@@ -1,0 +1,11 @@
+﻿@page "/conversations"
+@using GrpcProxy.Visualizer
+@using GrpcProxy.Data
+@inject IGroupingMessageRepository _messageRepo
+
+<PageTitle>Conversations</PageTitle>
+
+<MessageSearchComponent Repository="_messageRepo" TMessage="ProxyMessageChain">
+	<MessageDisplayComponent />
+</MessageSearchComponent>
+

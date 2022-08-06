@@ -1,0 +1,72 @@
+﻿@using GrpcProxy.Visualizer
+@using GrpcProxy.Data
+@using System.Collections.Immutable
+@implements IDisposable
+@typeparam TMessage where TMessage : ISearchable
+
+<div>
+	<div class="row" style="margin-bottom: 10px;">
+		<div class="col-md-auto">
+			<Button class="col btn btn-primary btn-sm" type="button" @onclick="ClearMessages">Clear</Button>
+		</div>
+		<div class="col input-group input-group-sm" style="max-width: 150px">
+			<span class="input-group-text" id="basic-addon1">$</span>
+			<input type="text" class="form-control" placeholder="search..." aria-label="search..." aria-describedby="basic-addon1" @bind-value="SearchText">
+		</div>
+	</div>
+	<CascadingValue Value="@Messages" TValue="ICollection<TMessage>">
+		@ChildContent
+	</CascadingValue>
+</div>
+
+@code
+{
+	[CascadingParameter]
+	public ICollection<TMessage> Messages { get; private set; } = new List<TMessage>();
+
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	[Parameter]
+	public IMessageRepository<TMessage> Repository { get; set; }
+
+	private string _searchText = string.Empty;
+	public string SearchText
+	{
+		get => _searchText;
+		set
+		{
+			_searchText = value;
+			SearchUpdate();
+		}
+	}
+
+	protected override Task OnInitializedAsync()
+	{
+		SearchText = string.Empty;
+		Repository.OnMessage += HandleMessage;
+		Messages = Repository.Messages;
+		return base.OnInitializedAsync();
+	}
+
+	public void SearchUpdate()
+	{
+		if (!string.IsNullOrWhiteSpace(SearchText))
+			Messages = Repository.Messages.Where(x => x.Contains(SearchText)).ToList();
+		else
+			Messages = Repository.Messages;
+		StateHasChanged();
+	}
+
+	public void ClearMessages() => Repository.Clear();
+
+	public async void HandleMessage(object? sender, TMessage eventData)
+	{
+		await InvokeAsync(() => SearchUpdate());
+	}
+
+	public void Dispose()
+	{
+		Repository.OnMessage -= HandleMessage;
+	}
+}

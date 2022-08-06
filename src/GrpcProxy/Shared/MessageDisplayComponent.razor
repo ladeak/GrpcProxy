@@ -1,0 +1,12 @@
+﻿@using GrpcProxy.Visualizer
+@using GrpcProxy.Data
+
+<Virtualize Context=item Items="Messages" TItem="ProxyMessageChain">
+	<ProxyMessageChainComponent Message=@item></ProxyMessageChainComponent>
+</Virtualize>
+
+@code
+{
+	[CascadingParameter]
+	public ICollection<ProxyMessageChain> Messages { get; set; }
+}

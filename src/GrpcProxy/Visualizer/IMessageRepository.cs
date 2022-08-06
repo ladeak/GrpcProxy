@@ -1,4 +1,4 @@
-﻿using GrpcProxy.Grpc;
+﻿using GrpcProxy.Data;
 
 namespace GrpcProxy.Visualizer;
 
@@ -23,7 +23,7 @@ public interface IMessageRepository<TMessage> : IMessageRepositoryIngress
     /// <summary>
     /// This event is fired when a new message is available in the repository.
     /// </summary>
-    public event EventHandler<ProxyMessage> OnMessage;
+    public event EventHandler<TMessage> OnMessage;
 
     /// <summary>
     /// Remove all messages from the repository.

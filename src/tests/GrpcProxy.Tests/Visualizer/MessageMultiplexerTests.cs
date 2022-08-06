@@ -1,4 +1,5 @@
 ﻿using System.Threading.Channels;
+using GrpcProxy.Data;
 using GrpcProxy.Grpc;
 using GrpcProxy.Visualizer;
 using NSubstitute;

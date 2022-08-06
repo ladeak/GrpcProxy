@@ -1,9 +1,7 @@
 ﻿using System.Collections.Immutable;
-using GrpcProxy.Grpc;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Visualizer;
-
-public record struct ProxyMessageChain(Guid Id, ImmutableArray<ProxyMessage> Chain);
 
 public interface IGroupingMessageRepository : IMessageRepository<ProxyMessageChain>
 {
@@ -11,7 +9,7 @@ public interface IGroupingMessageRepository : IMessageRepository<ProxyMessageCha
 
 public class GroupingMessageRepository : IGroupingMessageRepository
 {
-    public event EventHandler<ProxyMessage>? OnMessage;
+    public event EventHandler<ProxyMessageChain>? OnMessage;
 
     private ImmutableList<ProxyMessageChain> _chains = ImmutableList<ProxyMessageChain>.Empty;
 
@@ -52,13 +50,13 @@ public class GroupingMessageRepository : IGroupingMessageRepository
             temp = temp.RemoveAt(MaxSize);
 
         _chains = temp;
-        OnMessage?.Invoke(this, item);
+        OnMessage?.Invoke(this, chain);
         return Task.CompletedTask;
     }
 
     public void Clear()
     {
         _chains = _chains.Clear();
-        OnMessage?.Invoke(this, null!);
+        OnMessage?.Invoke(this, new ProxyMessageChain(Guid.Empty, ImmutableArray<ProxyMessage>.Empty));
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Shared.Server;
 using GrpcProxy.AspNetCore;
+using GrpcProxy.Data;
 using GrpcProxy.Forwarder;
 
 namespace GrpcProxy.Grpc.CallHandlers

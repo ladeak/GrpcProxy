@@ -6,6 +6,7 @@ using System.IO.Pipelines;
 using Grpc.AspNetCore.Server.Internal;
 using Grpc.Core;
 using Grpc.Net.Compression;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Grpc;
 

@@ -1,6 +1,6 @@
-﻿using System.Net;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Grpc.Core;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Grpc;
 
@@ -69,38 +69,4 @@ public class ProxyMessageMediator : IProxyMessageMediator
             ProxyError: exception);
         return _channel.Writer.WriteAsync(message);
     }
-}
-
-public record ProxyMessage(Guid ProxyCallId,
-    MessageDirection Direction,
-    DateTime Timestamp,
-    string Endpoint,
-    List<string> Headers,
-    string Path, string Message,
-    string MethodType,
-    bool IsCancelled,
-    HttpStatusCode? StatusCode = null, 
-    Exception? ProxyError = null)
-{
-    public bool Contains(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-            return true;
-
-        return Endpoint == text
-            || Path == text
-            || MethodType == text
-            || (text == "Request" && Direction == MessageDirection.Request)
-            || (text == "Response" && Direction == MessageDirection.Response)
-            || (text == "Proxy Error" && Direction == MessageDirection.None)
-            || Message.Contains(text)
-            || (ProxyError?.Message.Contains(text) ?? false);
-    }
-}
-
-public enum MessageDirection
-{
-    None = 0,
-    Request = 1,
-    Response = 2
 }

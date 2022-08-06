@@ -1,5 +1,6 @@
 ﻿using System.Threading.Channels;
 using Grpc.Core;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Grpc
 {

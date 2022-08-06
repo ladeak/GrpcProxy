@@ -3,6 +3,7 @@ using System.Text.Json;
 using Grpc.Core;
 using Grpc.Shared.Server;
 using GrpcProxy.AspNetCore;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Grpc.CallHandlers;
 

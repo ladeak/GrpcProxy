@@ -34,14 +34,21 @@ namespace Service
 
         public override async Task DuplexSyncStreaming(IAsyncStreamReader<RequestData> requestStream, IServerStreamWriter<ResponseData> responseStream, ServerCallContext context)
         {
-            int i = 0;
-            await foreach (var item in requestStream.ReadAllAsync())
-                if (!string.IsNullOrWhiteSpace(item.Message))
-                {
-                    Console.WriteLine($"Processing Stream {i++}");
-                    await responseStream.WriteAsync(new ResponseData { Message = $"Response part {i}" });
-                    await Task.Delay(WorkDuration);
-                }
+            try
+            {
+                int i = 0;
+                await foreach (var item in requestStream.ReadAllAsync(context.CancellationToken))
+                    if (!string.IsNullOrWhiteSpace(item.Message))
+                    {
+                        Console.WriteLine($"Processing Stream {i++}");
+                        await responseStream.WriteAsync(new ResponseData { Message = $"Response part {i}" });
+                        await Task.Delay(WorkDuration);
+                    }
+            }
+            catch (OperationCanceledException)
+            {
+                // This is normal operation
+            }
         }
 
         private static async Task<int> ReceivingStreamAsync(IAsyncStreamReader<RequestData> requestStream)

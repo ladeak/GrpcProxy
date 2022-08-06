@@ -1,4 +1,4 @@
-﻿using GrpcProxy.Grpc;
+﻿using GrpcProxy.Data;
 using GrpcProxy.Visualizer;
 
 namespace GrpcProxy.Tests.Visualizer

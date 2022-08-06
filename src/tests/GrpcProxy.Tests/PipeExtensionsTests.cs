@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Text;
 using Grpc.AspNetCore.Server.Internal;
 using Grpc.Core;
+using GrpcProxy.Data;
 using GrpcProxy.Grpc;
 
 namespace GrpcProxy.Tests;

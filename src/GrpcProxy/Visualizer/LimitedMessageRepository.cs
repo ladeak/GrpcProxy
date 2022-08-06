@@ -1,5 +1,5 @@
 ﻿using System.Collections.Immutable;
-using GrpcProxy.Grpc;
+using GrpcProxy.Data;
 
 namespace GrpcProxy.Visualizer;
 
