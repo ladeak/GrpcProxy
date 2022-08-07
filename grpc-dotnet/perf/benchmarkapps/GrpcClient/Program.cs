@@ -31,6 +31,7 @@ using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Grpc.Testing;
+using Grpc.Tests.Shared;
 using Microsoft.Crank.EventSources;
 using Microsoft.Extensions.Logging;
 
@@ -103,11 +104,27 @@ namespace GrpcClient
                 BenchmarksEventSource.Measure("IsServerGC", isServerGC.ToString());
                 BenchmarksEventSource.Measure("ProcessorCount", processorCount);
 
+                HttpEventSourceListener? listener = null;
+                if (_options.LogLevel != LogLevel.None)
+                {
+                    Log($"Setting up logging. Log level: {_options.LogLevel}");
+
+                    _loggerFactory = LoggerFactory.Create(c =>
+                    {
+                        c.AddConsole();
+                        c.SetMinimumLevel(_options.LogLevel);
+                    });
+
+                    listener = new HttpEventSourceListener(_loggerFactory);
+                }
+
                 CreateChannels();
 
                 await StartScenario();
 
                 await StopJobAsync();
+
+                listener?.Dispose();
             }, new ReflectionBinder<ClientOptions>(options));
 
             Log("gRPC Client");
@@ -292,12 +309,12 @@ namespace GrpcClient
 
         private static void CalculateLatency()
         {
-            BenchmarksEventSource.Register("grpc/latency/mean;http/latency/mean", Operations.Max, Operations.Sum, "Mean latency (ms)", "Mean latency (ms)", "n2");
-            BenchmarksEventSource.Register("grpc/latency/50;http/latency/50", Operations.Max, Operations.Sum, "50th percentile latency (ms)", "50th percentile latency (ms)", "n2");
-            BenchmarksEventSource.Register("grpc/latency/75;http/latency/75", Operations.Max, Operations.Sum, "75th percentile latency (ms)", "75th percentile latency (ms)", "n2");
-            BenchmarksEventSource.Register("grpc/latency/90;http/latency/90", Operations.Max, Operations.Sum, "90th percentile latency (ms)", "90th percentile latency (ms)", "n2");
-            BenchmarksEventSource.Register("grpc/latency/99;http/latency/99", Operations.Max, Operations.Sum, "99th percentile latency (ms)", "99th percentile latency (ms)", "n2");
-            BenchmarksEventSource.Register("grpc/latency/max;http/latency/max", Operations.Max, Operations.Sum, "Max latency (ms)", "Max latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/mean;http/latency/mean", Operations.Max, Operations.Max, "Mean latency (ms)", "Mean latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/50;http/latency/50", Operations.Max, Operations.Max, "50th percentile latency (ms)", "50th percentile latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/75;http/latency/75", Operations.Max, Operations.Max, "75th percentile latency (ms)", "75th percentile latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/90;http/latency/90", Operations.Max, Operations.Max, "90th percentile latency (ms)", "90th percentile latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/99;http/latency/99", Operations.Max, Operations.Max, "99th percentile latency (ms)", "99th percentile latency (ms)", "n2");
+            BenchmarksEventSource.Register("grpc/latency/max;http/latency/max", Operations.Max, Operations.Max, "Max latency (ms)", "Max latency (ms)", "n2");
             if (_options.Latency)
             {
                 var totalCount = 0;
@@ -383,15 +400,6 @@ namespace GrpcClient
             _latencyPerConnection = new List<List<double>>(_options.Connections);
             _latencyAverage = new List<(double sum, int count)>(_options.Connections);
 
-            if (_options.LogLevel != LogLevel.None)
-            {
-                _loggerFactory = LoggerFactory.Create(c =>
-                {
-                    c.AddConsole();
-                    c.SetMinimumLevel(_options.LogLevel);
-                });
-            }
-
             // Channel does not care about scheme
             var initialUri = _options.Url!;
             var resolvedUri = initialUri.Authority;
@@ -468,6 +476,10 @@ namespace GrpcClient
 
                     if (_options.Protocol == "h3")
                     {
+                        // Stop gRPC channel from creating TCP socket.
+                        httpClientHandler.ConnectCallback = (context, cancellationToken) => throw new InvalidOperationException("Should never be called for H3.");
+
+                        // Force H3 on all requests.
                         httpMessageHandler = new Http3DelegatingHandler(httpMessageHandler);
                     }
 

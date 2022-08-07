@@ -13,6 +13,8 @@
 
     <!-- Turn on preview features so we can use Http3. Can be removed in .NET 7 -->
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    <!-- TODO(JamesNK): Workaround https://github.com/grpc/grpc/issues/29672 -->
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +28,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 
+    <Compile Include="..\..\..\test\Shared\HttpEventSourceListener.cs" Link="HttpEventSourceListener.cs" />
     <Compile Include="..\Shared\BenchmarkConfigurationHelpers.cs" Link="BenchmarkConfigurationHelpers.cs" />
     <Compile Include="..\Shared\BenchmarkServiceImpl.cs" Link="Services\BenchmarkServiceImpl.cs" />
     <Compile Include="..\Shared\ServiceProvidersMiddleware.cs" Link="ServiceProvidersMiddleware.cs" />
@@ -45,7 +48,7 @@
     <ProjectReference Include="..\..\..\src\Grpc.AspNetCore.Server\Grpc.AspNetCore.Server.csproj" />
 
     <PackageReference Include="Google.Protobuf" Version="$(GoogleProtobufPackageVersion)" />
-    <PackageReference Include="Grpc.Tools" Version="$(GrpcPackageVersion)" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsPackageVersion)" PrivateAssets="All" />
 
     <!--
       TODO(JamesNK): This package ref should use MicrosoftAspNetCoreAppPackageVersion.

@@ -214,6 +214,14 @@ The gRPC-Web JavaScript client was generated from *greet.proto* using [`protoc`]
 * Configure ASP.NET Core server to enable gRPC-Web cross-origin requests (CORS)
 * Call gRPC services with JavaScript from a SPA
 
+## [Transcoder](./Transcoder)
+
+The transcoder shows how to use [gRPC JSON transcoding](https://docs.microsoft.com/aspnet/core/grpc/httpapi) to generate RESTful APIs from gRPC services.
+
+##### Scenarios:
+
+* gRPC JSON transcoding
+
 ## [Microservicer](./Microservicer)
 
 The microservicer example shows how to use gRPC in a solution that contains multiple web apps. The backend app hosts a gRPC service that is called by the frontend app. The frontend app uses gRPC client factory to create a client an inject it into the MVC controller with dependency injection.
@@ -298,3 +306,14 @@ The downloader shows how to download a file in chunks using a server streaming g
 
 * Server streaming
 * Binary payload
+
+## [Locator](./Locator)
+
+The locator shows how to add host constraints to gRPC services. This example adds two services:
+
+* Internal gRPC service is only accessible over port 5001.
+* External gRPC service is only accessible over port 5000.
+
+##### Scenarios:
+
+* [`RequireHost`](https://docs.microsoft.com/aspnet/core/fundamentals/routing#host-matching-in-routes-with-requirehost)

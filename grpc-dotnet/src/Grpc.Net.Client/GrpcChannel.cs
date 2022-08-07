@@ -59,6 +59,7 @@ namespace Grpc.Net.Client
 
         internal Uri Address { get; }
         internal HttpMessageInvoker HttpInvoker { get; }
+        internal TimeSpan? ConnectTimeout { get; }
         internal HttpHandlerType HttpHandlerType { get; }
         internal TimeSpan InitialReconnectBackoff { get; }
         internal TimeSpan? MaxReconnectBackoff { get; }
@@ -70,6 +71,7 @@ namespace Grpc.Net.Client
         internal ILoggerFactory LoggerFactory { get; }
         internal ILogger Logger { get; }
         internal bool ThrowOperationCanceledOnCancellation { get; }
+        internal bool UnsafeUseInsecureChannelCallCredentials { get; }
         internal bool IsSecure => _isSecure;
         internal List<CallCredentials>? CallCredentials => _callCredentials;
         internal Dictionary<string, ICompressionProvider> CompressionProviders { get; }
@@ -111,7 +113,7 @@ namespace Grpc.Net.Client
             Address = address;
             LoggerFactory = channelOptions.LoggerFactory ?? channelOptions.ResolveService<ILoggerFactory>(NullLoggerFactory.Instance);
             RandomGenerator = channelOptions.ResolveService<IRandomGenerator>(new RandomGenerator());
-            HttpHandlerType = CalculateHandlerType(channelOptions);
+            (HttpHandlerType, ConnectTimeout) = CalculateHandlerContext(channelOptions);
 
 #if SUPPORT_LOAD_BALANCING
             InitialReconnectBackoff = channelOptions.InitialReconnectBackoff;
@@ -159,6 +161,7 @@ namespace Grpc.Net.Client
             MessageAcceptEncoding = GrpcProtocolHelpers.GetMessageAcceptEncoding(CompressionProviders);
             Logger = LoggerFactory.CreateLogger<GrpcChannel>();
             ThrowOperationCanceledOnCancellation = channelOptions.ThrowOperationCanceledOnCancellation;
+            UnsafeUseInsecureChannelCallCredentials = channelOptions.UnsafeUseInsecureChannelCallCredentials;
             _createMethodInfoFunc = CreateMethodInfo;
             ActiveCalls = new HashSet<IDisposable>();
             if (channelOptions.ServiceConfig is { } serviceConfig)
@@ -203,8 +206,8 @@ namespace Grpc.Net.Client
                 {
                     throw new InvalidOperationException($"Unable to determine the TLS configuration of the channel from address '{Address}'. " +
                         $"{nameof(GrpcChannelOptions)}.{nameof(GrpcChannelOptions.Credentials)} must be specified when the address doesn't have a 'http' or 'https' scheme. " +
-                        "To call TLS endpoints, set credentials to 'new SslCredentials()'. " +
-                        "To call non-TLS endpoints, set credentials to 'ChannelCredentials.Insecure'.");
+                        $"To call TLS endpoints, set credentials to '{nameof(ChannelCredentials)}.{nameof(ChannelCredentials.SecureSsl)}'. " +
+                        $"To call non-TLS endpoints, set credentials to '{nameof(ChannelCredentials)}.{nameof(ChannelCredentials.Insecure)}'.");
                 }
                 callCredentials = null;
             }
@@ -215,17 +218,58 @@ namespace Grpc.Net.Client
             return Address.Scheme == Uri.UriSchemeHttps || Address.Scheme == Uri.UriSchemeHttp;
         }
 
-        private static HttpHandlerType CalculateHandlerType(GrpcChannelOptions channelOptions)
+        private static HttpHandlerContext CalculateHandlerContext(GrpcChannelOptions channelOptions)
         {
             if (channelOptions.HttpHandler == null)
             {
                 // No way to know what handler a HttpClient is using so assume custom.
-                return channelOptions.HttpClient == null
+                var type = channelOptions.HttpClient == null
                     ? HttpHandlerType.SocketsHttpHandler
                     : HttpHandlerType.Custom;
+
+                return new HttpHandlerContext(type);
             }
 
-            return HttpRequestHelpers.CalculateHandlerType(channelOptions.HttpHandler);
+            if (HttpRequestHelpers.HasHttpHandlerType(channelOptions.HttpHandler, "System.Net.Http.WinHttpHandler"))
+            {
+                return new HttpHandlerContext(HttpHandlerType.WinHttpHandler);
+            }
+            if (HttpRequestHelpers.HasHttpHandlerType(channelOptions.HttpHandler, "System.Net.Http.SocketsHttpHandler"))
+            {
+                HttpHandlerType type;
+                TimeSpan? connectTimeout;
+
+#if NET5_0_OR_GREATER
+                var socketsHttpHandler = HttpRequestHelpers.GetHttpHandlerType<SocketsHttpHandler>(channelOptions.HttpHandler)!;
+
+                type = HttpHandlerType.SocketsHttpHandler;
+                connectTimeout = socketsHttpHandler.ConnectTimeout;
+
+                // Check if the SocketsHttpHandler is being shared by channels.
+                // It has already been setup by another channel (i.e. ConnectCallback is set) then
+                // additional channels can use advanced connectivity features.
+                if (!BalancerHttpHandler.IsSocketsHttpHandlerSetup(socketsHttpHandler))
+                {
+                    // Someone has already configured the handler callback.
+                    // This channel can't support advanced connectivity features.
+                    if (socketsHttpHandler.ConnectCallback != null)
+                    {
+                        type = HttpHandlerType.Custom;
+                        connectTimeout = null;
+                    }
+                }
+#else
+                type = HttpHandlerType.SocketsHttpHandler;
+                connectTimeout = null;
+#endif
+                return new HttpHandlerContext(type, connectTimeout);
+            }
+            if (HttpRequestHelpers.GetHttpHandlerType<HttpClientHandler>(channelOptions.HttpHandler) != null)
+            {
+                return new HttpHandlerContext(HttpHandlerType.HttpClientHandler);
+            }
+
+            return new HttpHandlerContext(HttpHandlerType.Custom);
         }
 
 #if SUPPORT_LOAD_BALANCING
@@ -344,7 +388,15 @@ namespace Grpc.Net.Client
 #endif
 
 #if SUPPORT_LOAD_BALANCING
-            handler = new BalancerHttpHandler(handler, HttpHandlerType, ConnectionManager);
+            if (HttpHandlerType == HttpHandlerType.SocketsHttpHandler)
+            {
+                var socketsHttpHandler = HttpRequestHelpers.GetHttpHandlerType<SocketsHttpHandler>(handler);
+                CompatibilityHelpers.Assert(socketsHttpHandler != null, "Should have handler with this handler type.");
+
+                BalancerHttpHandler.ConfigureSocketsHttpHandlerSetup(socketsHttpHandler);
+            }
+
+            handler = new BalancerHttpHandler(handler, ConnectionManager);
 #endif
 
             // Use HttpMessageInvoker instead of HttpClient because it is faster
@@ -661,7 +713,7 @@ namespace Grpc.Net.Client
         }
 
 #if SUPPORT_LOAD_BALANCING
-        private class SubChannelTransportFactory : ISubchannelTransportFactory
+        private sealed class SubChannelTransportFactory : ISubchannelTransportFactory
         {
             private readonly GrpcChannel _channel;
 
@@ -674,7 +726,7 @@ namespace Grpc.Net.Client
             {
                 if (_channel.HttpHandlerType == HttpHandlerType.SocketsHttpHandler)
                 {
-                    return new SocketConnectivitySubchannelTransport(subchannel, TimeSpan.FromSeconds(5), _channel.LoggerFactory);
+                    return new SocketConnectivitySubchannelTransport(subchannel, TimeSpan.FromSeconds(5), _channel.ConnectTimeout, _channel.LoggerFactory);
                 }
 
                 return new PassiveSubchannelTransport(subchannel);
@@ -682,7 +734,7 @@ namespace Grpc.Net.Client
         }
 #endif
 
-        private struct MethodKey : IEquatable<MethodKey>
+        private readonly struct MethodKey : IEquatable<MethodKey>
         {
             public MethodKey(string? service, string? method)
             {
@@ -713,5 +765,15 @@ namespace Grpc.Net.Client
                 _addressPathUnused(logger, address, null);
             }
         }
+
+        private readonly record struct HttpHandlerContext(HttpHandlerType HttpHandlerType, TimeSpan? ConnectTimeout = null);
+    }
+
+    internal enum HttpHandlerType
+    {
+        SocketsHttpHandler,
+        HttpClientHandler,
+        WinHttpHandler,
+        Custom
     }
 }
