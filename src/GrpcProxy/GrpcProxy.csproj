@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\grpc-dotnet\src\Grpc.AspNetCore.Server\Grpc.AspNetCore.Server.csproj" />
+    <ProjectReference Include="..\..\grpc-dotnet\src\Grpc.Core.Api\Grpc.Core.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
