@@ -15,7 +15,7 @@ public class GroupingMessageRepository : IGroupingMessageRepository
 
     public static int MaxSize { get; } = 1000;
 
-    public bool IsPaused { get; private set; }
+    public bool IsEnabled { get; private set; } = true;
 
     public ICollection<ProxyMessageChain> Messages
     {
@@ -33,7 +33,7 @@ public class GroupingMessageRepository : IGroupingMessageRepository
 
     public Task AddAsync(ProxyMessage item)
     {
-        if (IsPaused)
+        if (!IsEnabled)
             return Task.CompletedTask;
 
         var temp = _chains;
@@ -65,13 +65,13 @@ public class GroupingMessageRepository : IGroupingMessageRepository
         OnMessage?.Invoke(this, new ProxyMessageChain(Guid.Empty, string.Empty, ImmutableArray<ProxyMessage>.Empty));
     }
 
-    public void Pause()
+    public void Disable()
     {
-        IsPaused = true;
+        IsEnabled = false;
     }
 
-    public void Resume()
+    public void Enable()
     {
-        IsPaused = false;
+        IsEnabled = true;
     }
 }

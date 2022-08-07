@@ -55,7 +55,7 @@
 		SearchText = string.Empty;
 		Repository.OnMessage += HandleMessage;
 		Messages = Repository.Messages;
-		TogglePauseText = Repository.IsPaused ? Resume : Pause;
+		TogglePauseText = Repository.IsEnabled ? Pause : Resume;
 		return base.OnInitializedAsync();
 	}
 
@@ -80,12 +80,12 @@
 		if (TogglePauseText == Pause)
 		{
 			TogglePauseText = Resume;
-			Repository.Pause();
+			Repository.Disable();
 		}
 		else
 		{
 			TogglePauseText = Pause;
-			Repository.Resume();
+			Repository.Enable();
 		}
 	}
 

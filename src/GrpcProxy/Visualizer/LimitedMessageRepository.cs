@@ -16,11 +16,11 @@ public class LimitedMessageRepository : ILimitedMessageRepository
 
     public ICollection<ProxyMessage> Messages => _messages;
 
-    public bool IsPaused { get; private set; }
+    public bool IsEnabled { get; private set; } = true;
 
     public Task AddAsync(ProxyMessage item)
     {
-        if (IsPaused)
+        if (!IsEnabled)
             return Task.CompletedTask;
 
         var temp = _messages.Insert(0, item);
@@ -37,13 +37,13 @@ public class LimitedMessageRepository : ILimitedMessageRepository
         OnMessage?.Invoke(this, null!);
     }
 
-    public void Pause()
+    public void Disable()
     {
-        IsPaused = true;
+        IsEnabled = false;
     }
 
-    public void Resume()
+    public void Enable()
     {
-        IsPaused = false;
+        IsEnabled = true;
     }
 }

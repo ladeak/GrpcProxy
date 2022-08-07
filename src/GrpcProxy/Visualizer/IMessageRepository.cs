@@ -23,7 +23,7 @@ public interface IMessageRepository<TMessage> : IMessageRepositoryIngress
     /// <summary>
     /// Returns if the current repository has paused processing messages.
     /// </summary>
-    public bool IsPaused { get; }
+    public bool IsEnabled { get; }
 
     /// <summary>
     /// This event is fired when a new message is available in the repository.
@@ -38,10 +38,10 @@ public interface IMessageRepository<TMessage> : IMessageRepositoryIngress
     /// <summary>
     /// Pauses message processing
     /// </summary>
-    public void Pause();
+    public void Disable();
 
     /// <summary>
     /// Resumes message processing
     /// </summary>
-    public void Resume();
+    public void Enable();
 }
