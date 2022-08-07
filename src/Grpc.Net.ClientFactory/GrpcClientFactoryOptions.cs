@@ -38,6 +38,11 @@ namespace Grpc.Net.ClientFactory
         public IList<Action<GrpcChannelOptions>> ChannelOptionsActions { get; } = new List<Action<GrpcChannelOptions>>();
 
         /// <summary>
+        /// Gets a list of operations used to configure a <see cref="CallOptions"/>.
+        /// </summary>
+        public IList<Action<CallOptionsContext>> CallOptionsActions { get; } = new List<Action<CallOptionsContext>>();
+
+        /// <summary>
         /// Gets a list of <see cref="Interceptor"/> instances used to configure a gRPC client pipeline.
         /// </summary>
         [Obsolete("Interceptors collection is obsolete and will be removed in a future release. Use InterceptorRegistrations collection instead.")]
@@ -52,6 +57,8 @@ namespace Grpc.Net.ClientFactory
         /// Gets or sets a delegate that will override how a client is created.
         /// </summary>
         public Func<CallInvoker, object>? Creator { get; set; }
+
+        internal bool HasCallCredentials { get; set; }
 
         internal static CallInvoker BuildInterceptors(
             CallInvoker callInvoker,

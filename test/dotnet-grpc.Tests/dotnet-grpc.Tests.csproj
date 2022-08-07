@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- MSBuild has issues with testing frameworks other than the one referenced in global.json -->
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFrameworks>net7.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <RootNamespace>Grpc.Dotnet.Cli.Tests</RootNamespace>
   </PropertyGroup>
@@ -53,7 +53,7 @@
     </AssemblyAttribute>
     <AssemblyAttribute Include="Grpc.Dotnet.Cli.Internal.GrpcDependencyAttribute">
       <_Parameter1>Grpc.Tools</_Parameter1>
-      <_Parameter2>$(GrpcPackageVersion)</_Parameter2>
+      <_Parameter2>$(GrpcToolsPackageVersion)</_Parameter2>
       <_Parameter3>All</_Parameter3>
       <_Parameter4>Client;None</_Parameter4>
     </AssemblyAttribute>

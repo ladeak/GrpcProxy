@@ -1,15 +1,17 @@
 <Project>
   <PropertyGroup>
     <BenchmarkDotNetPackageVersion>0.13.1</BenchmarkDotNetPackageVersion>
+    <GoogleApisAuthPackageVersion>1.46.0</GoogleApisAuthPackageVersion>
     <GoogleProtobufPackageVersion>3.19.4</GoogleProtobufPackageVersion>
     <GrpcDotNetPackageVersion>2.44.0</GrpcDotNetPackageVersion>  <!-- Used by example projects -->
-    <GrpcPackageVersion>2.45.0</GrpcPackageVersion>
+    <GrpcPackageVersion>2.46.3</GrpcPackageVersion>
+    <GrpcToolsPackageVersion>2.47.0</GrpcToolsPackageVersion>
     <MicrosoftAspNetCoreAppPackageVersion>6.0.0</MicrosoftAspNetCoreAppPackageVersion>
     <MicrosoftAspNetCoreApp5PackageVersion>5.0.3</MicrosoftAspNetCoreApp5PackageVersion>
     <MicrosoftAspNetCoreApp31PackageVersion>3.1.3</MicrosoftAspNetCoreApp31PackageVersion>
     <MicrosoftBuildLocatorPackageVersion>1.2.2</MicrosoftBuildLocatorPackageVersion>
     <MicrosoftBuildPackageVersion>16.0.461</MicrosoftBuildPackageVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>6.0.0</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>7.0.0-preview1.22168.1</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
     <MicrosoftCrankEventSourcesPackageVersion>0.2.0-alpha.21255.1</MicrosoftCrankEventSourcesPackageVersion>
     <MicrosoftExtensionsLoggingTestingPackageVersion>2.1.1</MicrosoftExtensionsLoggingTestingPackageVersion>
     <MicrosoftExtensionsPackageVersion>3.0.3</MicrosoftExtensionsPackageVersion>
@@ -21,14 +23,16 @@
     <NewtonsoftJsonPackageVersion>12.0.3</NewtonsoftJsonPackageVersion>
     <NunitPackageVersion>3.13.1</NunitPackageVersion>
     <Nunit3TestAdapterPackageVersion>3.16.1</Nunit3TestAdapterPackageVersion>
-    <OpenTelemetryPackageVersion>0.6.0-beta.1</OpenTelemetryPackageVersion>
+    <OpenTelemetryPackageVersion>1.3.0</OpenTelemetryPackageVersion>
+    <OpenTelemetryIntergationPackageVersion>1.0.0-rc9.4</OpenTelemetryIntergationPackageVersion>
     <ProtobufNetGrpcPackageVersion>1.0.140</ProtobufNetGrpcPackageVersion>
     <SystemCommandLinePackageVersion>2.0.0-beta3.22114.1</SystemCommandLinePackageVersion>
     <SystemCommandLineRenderingPackageVersion>0.4.0-alpha.22114.1</SystemCommandLineRenderingPackageVersion>
     <SystemDiagnosticsDiagnosticSourcePackageVersion>4.5.1</SystemDiagnosticsDiagnosticSourcePackageVersion>
     <SystemIOPipelinesPackageVersion>5.0.1</SystemIOPipelinesPackageVersion>
     <SystemMemoryPackageVersion>4.5.3</SystemMemoryPackageVersion>
-    <SystemNetHttpWinHttpHandlerPackageVersion>6.0.0</SystemNetHttpWinHttpHandlerPackageVersion>
+    <SystemNetHttpWinHttpHandlerPackageVersion>6.0.1</SystemNetHttpWinHttpHandlerPackageVersion>
     <SystemSecurityPrincipalWindowsPackageVersion>4.6.0</SystemSecurityPrincipalWindowsPackageVersion>
+    <SystemThreadingChannelsPackageVersion>4.6.0</SystemThreadingChannelsPackageVersion>
   </PropertyGroup>
 </Project>
