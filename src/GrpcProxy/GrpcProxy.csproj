@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.25.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.25.3" />
     <PackageReference Include="Grpc.Core.Api" Version="2.60.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageReference Include="Seq.Extensions.Logging" Version="8.0.0" />
